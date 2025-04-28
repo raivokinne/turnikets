@@ -60,9 +60,9 @@ export default function LoginPage() {
 				<div className="w-full max-w-md">
 					<Card>
 						<CardHeader className="space-y-1">
-							<CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+							<CardTitle className="text-2xl font-bold text-center">Pieteikties</CardTitle>
 							<CardDescription className="text-center">
-								Enter your email and password to access your account
+								Ievadiet savu e-pastu un paroli, lai piekļūtu savam kontam
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
@@ -80,7 +80,7 @@ export default function LoginPage() {
 										name="email"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Email</FormLabel>
+												<FormLabel>E-pasts</FormLabel>
 												<FormControl>
 													<Input
 														placeholder="email@example.com"
@@ -100,7 +100,7 @@ export default function LoginPage() {
 										name="password"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Password</FormLabel>
+												<FormLabel>Parole</FormLabel>
 												<FormControl>
 													<Input
 														placeholder="••••••••"
@@ -120,21 +120,15 @@ export default function LoginPage() {
 										className="w-full"
 										disabled={isLoading}
 									>
-										{isLoading ? "Logging in..." : "Login"}
+										{isLoading ? "Notiek Pieteikšanās..." : "Pieteikties"}
 									</Button>
 								</form>
 							</Form>
 						</CardContent>
 						<CardFooter className="flex flex-col space-y-2">
-							<div className="text-sm text-center text-gray-500">
-								Don't have an account?{" "}
-								<Link to="/register" className="text-primary hover:underline">
-									Register
-								</Link>
-							</div>
 							<div className="text-sm text-center">
 								<Link to="/forgot-password" className="text-gray-500 hover:text-primary hover:underline">
-									Forgot your password?
+									Aizmirsāt paroli?
 								</Link>
 							</div>
 						</CardFooter>

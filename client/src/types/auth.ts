@@ -2,7 +2,8 @@ export interface User {
 	id: string;
 	name: string;
 	email: string;
-	role: string
+	role: string;
+	avatar: string;
 }
 
 export interface AuthCredentials {
