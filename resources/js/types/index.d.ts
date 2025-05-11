@@ -1,10 +1,13 @@
 import { Config } from 'ziggy-js';
+
 export interface User {
-  id: number;
-  name: string;
-  email: string;
-  avatar?: string;
-  role?: string;
+    id: number;
+    name: string;
+    email: string;
+    email_verified_at?: string;
+    role: string;
+    avatar: string;
+    created_at: string;
 }
 
 declare module '@inertiajs/react' {
@@ -13,14 +16,6 @@ declare module '@inertiajs/react' {
       user: User;
     };
   }
-}
-export interface User {
-    id: number;
-    name: string;
-    email: string;
-    email_verified_at?: string;
-    role: string;
-    avatar: string;
 }
 
 export type PageProps<
