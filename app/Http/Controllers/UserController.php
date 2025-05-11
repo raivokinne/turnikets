@@ -2,38 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\LoginRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function login(Request $request)
+    public function login(LoginRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if (!Auth::attempt($request->only('email', 'password'), true)) {
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
-        }
+        $request->authenticate();
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        Auth::guard('web')->logout();
 
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
