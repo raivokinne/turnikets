@@ -1,11 +1,10 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     if (Auth::user()) {
@@ -15,19 +14,16 @@ Route::get('/', function () {
 });
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', fn() => Inertia::render('Auth/Login'))->name('login');
-    Route::post('/login', [UserController::class, 'login']);
+    Route::get('login', [AuthenticatedSessionController::class, 'create'])
+        ->name('login');
 
-    Route::get('/register', fn() => Inertia::render('Auth/Register'))->name('register');
-    Route::post('/register', [UserController::class, 'register']);
-
-    Route::get('/forgot-password', fn() => Inertia::render('Auth/ForgotPassword'))->name('password.request');
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::post('/logout', [UserController::class, 'logout']);
+Route::middleware('auth')->group(function () {
+     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+        ->name('logout');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/dashboard', [PageController::class, 'dashboard'])->name('dashboard');
 });

@@ -6,14 +6,14 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginPage() {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, post, setData, processing, errors} = useForm({
         email: '',
         password: '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        router.post('/login', data)
+        router.post("/login", data)
     }
 
     return (
@@ -82,13 +82,6 @@ export default function LoginPage() {
                             </Button>
                         </form>
                     </CardContent>
-                    <CardFooter className="flex flex-col space-y-2">
-                        <div className="text-sm text-center">
-                            <Link href={route('password.request')} className="text-gray-500 hover:text-primary hover:underline">
-                                Aizmirsāt paroli?
-                            </Link>
-                        </div>
-                    </CardFooter>
                 </Card>
             </div>
         </div>
