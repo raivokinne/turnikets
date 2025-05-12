@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Mail, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Upload } from 'lucide-react';
 import type { User as UserType } from '@/types';
+import { router, useForm} from '@inertiajs/react';
 
 export default function Edit({ user }: { user: UserType }) {
-    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
+    const { data, setData } = useForm()
     const back = () => {
         window.history.back();
     };
@@ -22,12 +22,11 @@ export default function Edit({ user }: { user: UserType }) {
             return;
         }
 
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return;
-        }
+        setData({
+          avatar: file.name
+        })
 
-        setIsUploading(true);
+        router.patch('profile', data)
     };
 
     const triggerFileInput = () => {
@@ -59,13 +58,8 @@ export default function Edit({ user }: { user: UserType }) {
                             size="sm"
                             className="absolute -bottom-2 -right-2 rounded-full p-1 h-8 w-8"
                             onClick={triggerFileInput}
-                            disabled={isUploading}
                         >
-                            {isUploading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Upload className="h-4 w-4" />
-                            )}
+                            <Upload className="h-4 w-4" />
                         </Button>
 
                         <input
