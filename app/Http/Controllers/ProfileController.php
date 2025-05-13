@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,19 +18,23 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request): RedirectResponse
     {
-        $request->validated();
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'email' => 'required|email'
+        ]);
 
         $user = User::query()->where('email', request('email'))->first();
 
         $file = $request->file('avatar');
-        $fileName = time() . $request->image->extension();
-        $request->image->move(public_path('avatar'), $fileName);
+        $fileName = time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('avatars', $fileName, 'public');
 
         $user->update([
+            'avatar' => $filePath
         ]);
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::route('profile')->with('status', 'profile-updated');
     }
 }
