@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class UserController extends Controller
 {
-}
+    public function create(): Response
+    {
+        return Inertia::render('User/Create.tsx');
+    }
 
+    public function store(Request $request): void
+    {
+        $request->validate();
+    }
+}

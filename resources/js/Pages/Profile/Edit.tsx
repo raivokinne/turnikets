@@ -4,29 +4,36 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Mail, Upload } from 'lucide-react';
 import type { User as UserType } from '@/types';
-import { router, useForm} from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 
 export default function Edit({ user }: { user: UserType }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { data, setData } = useForm()
+
     const back = () => {
         window.history.back();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            return;
-        }
+        const formData = new FormData();
+        formData.append('avatar', file);
+        formData.append('email', user.email);
+        formData.append('_method', 'PATCH');
 
-        setData({
-          avatar: file.name
-        })
-
-        router.patch('profile', data)
+        router.post("/profile", formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            },
+            onError: (errors) => {
+                console.error('Error updating avatar:', errors);
+            }
+        });
     };
 
     const triggerFileInput = () => {
@@ -47,21 +54,11 @@ export default function Edit({ user }: { user: UserType }) {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                     <div className="relative group">
                         <Avatar className="h-20 w-20">
-                            <AvatarImage src={user.avatar} alt={user?.name} />
+                            <AvatarImage src={"http://localhost:8000/storage/" + user.avatar} alt={user?.name} />
                             <AvatarFallback className="bg-primary/10 text-2xl font-medium">
                                 {user?.name?.charAt(0).toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="absolute -bottom-2 -right-2 rounded-full p-1 h-8 w-8"
-                            onClick={triggerFileInput}
-                        >
-                            <Upload className="h-4 w-4" />
-                        </Button>
-
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -69,8 +66,16 @@ export default function Edit({ user }: { user: UserType }) {
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             onChange={handleFileChange}
                         />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="absolute -bottom-2 -right-2 rounded-full p-1 h-8 w-8"
+                            onClick={triggerFileInput}
+                        >
+                            <Upload className="h-4 w-4" />
+                        </Button>
                     </div>
-
                     <div className="flex-1">
                         <h1 className="text-3xl font-bold text-gray-900">{user?.name}</h1>
                         <div className="flex items-center mt-1 text-gray-500">
