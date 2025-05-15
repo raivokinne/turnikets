@@ -20,9 +20,8 @@ export default function Edit({ user }: { user: UserType }) {
         const formData = new FormData();
         formData.append('avatar', file);
         formData.append('email', user.email);
-        formData.append('_method', 'PATCH');
 
-        router.post("/profile", formData, {
+        router.patch("/profile", formData, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {

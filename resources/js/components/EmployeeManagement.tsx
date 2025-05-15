@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserPlus, Download, Search, Edit, Trash2, Mail } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { UserPlus, Search, Edit, Trash2, Mail } from 'lucide-react';
 
 const EmployeeManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,13 +49,8 @@ const EmployeeManagement = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
-                Eksportēt
-              </Button>
             </div>
           </div>
-          <CardDescription>Pārvaldiet skolas darbiniekus un viņu piekļuves tiesības</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -64,9 +58,6 @@ const EmployeeManagement = () => {
               <TableRow>
                 <TableHead>Vārds</TableHead>
                 <TableHead>E-pasts</TableHead>
-                <TableHead>Loma</TableHead>
-                <TableHead>Nodaļa</TableHead>
-                <TableHead className="text-right">Darbības</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -74,12 +65,6 @@ const EmployeeManagement = () => {
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">{employee.name}</TableCell>
                   <TableCell>{employee.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
-                      {employee.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{employee.department}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
                       <Button variant="ghost" size="sm">
@@ -106,36 +91,6 @@ const EmployeeManagement = () => {
           </div>
         </CardFooter>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Piekļuves pārvaldība</CardTitle>
-            <CardDescription>Pārvaldiet darbinieku atļaujas un piekļuves tiesības</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">Konfigurējiet, kuriem darbiniekiem ir administratora piekļuve sistēmai.</p>
-            <p className="text-sm">Pašreizējie administratori: 2 (no {employees.length} darbiniekiem)</p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline">Pārvaldīt piekļuves tiesības</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Nodaļu pārvaldība</CardTitle>
-            <CardDescription>Izveidojiet un pārvaldiet skolas nodaļas</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">Organizējiet darbiniekus pa nodaļām labākai pārvaldībai.</p>
-            <p className="text-sm">Pašreizējās nodaļas: 4</p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline">Pārvaldīt nodaļas</Button>
-          </CardFooter>
-        </Card>
-      </div>
     </div>
   );
 };

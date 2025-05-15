@@ -3,29 +3,17 @@ import { Button } from '@/components/ui/button';
 import {
   User as UserIcon,
   LogOut,
-  School,
-  Users,
-  Settings,
-  Search,
-  QrCode,
-  Clock,
-  Mail,
-  FileText,
-  Activity,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import EmployeeManagement from '@/components/EmployeeManagement';
 import StudentDashboard from '@/components/StudentDashboard';
 import type { User } from '@/types';
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 
 export default function Dashboard({ user }: { user: User }) {
     const [isLoading, setIsLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const isAdmin = user.role === 'admin' ? true : false
 
     const handleLogout = () => {
@@ -53,17 +41,7 @@ export default function Dashboard({ user }: { user: User }) {
                 <header className="bg-white shadow px-4">
                     <div className="flex justify-between items-center">
                         <div className="p-4 border-b">
-                            <h1 className="text-2xl font-bold text-gray-900">Panelis</h1>
-                            <p className="text-sm text-gray-500">Skolēnu piekļuves sistēma</p>
-                        </div>
-                        <div className="relative w-64">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder={isAdmin ? "Meklēt darbiniekus..." : "Meklēt skolēnus..."}
-                                className="pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                            <Link href="/dashboard" className="text-2xl font-bold text-gray-900">Panelis</Link>
                         </div>
 
                         <div className="flex items-center space-x-2">

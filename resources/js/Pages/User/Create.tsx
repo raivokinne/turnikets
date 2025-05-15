@@ -6,7 +6,7 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FormEvent } from 'react';
 
-export default function Login() {
+export default function Create() {
     const { data, post, setData, processing, errors} = useForm({
         email: '',
         password: '',
@@ -14,7 +14,7 @@ export default function Login() {
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        post(route('login'))
+        post(route('users.show'))
     }
 
     return (
@@ -88,3 +88,4 @@ export default function Login() {
         </div>
     );
 }
+
