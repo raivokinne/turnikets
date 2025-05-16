@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('access_creadentials', function (Blueprint $table) {
             $table->id();
             $table->string('email')->unique();
-            $table->string('qrcode')->unique();
-            $table->foreignId('student_id')->constrained()->onDelete('cascade');
+            $table->string('qrcode_url')->unique();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
