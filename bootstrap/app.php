@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\App\Http\Middleware\HandleInertiaRequests::class);
-        /* $middleware->append(StartSession::class); */
+        $middleware->append(StartSession::class);
+        $middleware->validateCsrfTokens(
+            except: [
+                '/*',
+            ]
+        );
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

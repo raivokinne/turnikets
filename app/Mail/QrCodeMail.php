@@ -49,9 +49,10 @@ class QrCodeMail extends Mailable
      */
     public function attachments(): array
     {
-        $fileContent = file_get_contents(public_path($this->attachmentUrl));
+        $fileContents = Http::get($this->attachmentUrl)->body();
+
         return [
-            Attachment::fromData(fn () => $fileContent, 'qrcode.png')
+            Attachment::fromData(fn () => $fileContents, 'qrcode.png')
                 ->withMime('image/png'),
         ];
     }
