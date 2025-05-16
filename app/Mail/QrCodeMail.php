@@ -44,7 +44,9 @@ class QrCodeMail extends Mailable
             ]
         );
     }
-
+    /**
+     * @return array<int,Attachment>
+     */
     public function attachments(): array
     {
         $fileContents = Http::get($this->attachmentUrl)->body();
