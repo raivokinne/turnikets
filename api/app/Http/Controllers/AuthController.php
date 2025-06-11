@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\AccessCredential;
 use App\Mail\QrCodeMail;
-use Illuminate\Http\Request;
+use App\Models\AccessCredential;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'email'    => 'required|string|email',
+            'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
@@ -40,9 +40,9 @@ class AuthController extends Controller
         $token = $user->createToken('auth_12345')->plainTextToken;
 
         return response()->json([
-            'status'  => 200,
+            'status' => 200,
             'message' => 'User successfully logged in',
-            'token'   => $token,
+            'token' => $token,
         ]);
     }
 
@@ -54,7 +54,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'status'  => 200,
+            'status' => 200,
             'message' => 'User successfully logged out',
         ]);
     }
@@ -123,13 +123,13 @@ class AuthController extends Controller
         ]);
 
         // Generate QR code data
-        $hex_data = "47455420" . // GET
-            "2F63646F722E6367693F6F70656E3D312664" . // /cdor.cgi?open=1&d
-            "6F6F723D3020485454502F312E310D0A" . // oor=0 HTTP/1.1\r\n
-            "486F73743A203139322E3136382E31332E3233350D0A" . // Host: 192.168.13.235\r\n
-            "417574686F72697A6174696F6E3A20426173696320" . // Authorization: Basic
-            "59574E7430566D6C75364F4467344F4467344F4467340D0A" . // Base64 encoded credentials\r\n
-            "436F6E6E656374696F6E3A20636C6F73650D0A0D0A"; // Connection: close\r\n\r\n
+        $hex_data = '47455420'  // GET
+            . '2F63646F722E6367693F6F70656E3D312664'  // /cdor.cgi?open=1&d
+            . '6F6F723D3020485454502F312E310D0A'  // oor=0 HTTP/1.1\r\n
+            . '486F73743A203139322E3136382E31332E3233350D0A'  // Host: 192.168.13.235\r\n
+            . '417574686F72697A6174696F6E3A20426173696320'  // Authorization: Basic
+            . '59574E7430566D6C75364F4467344F4467344F4467340D0A'  // Base64 encoded credentials\r\n
+            . '436F6E6E656374696F6E3A20636C6F73650D0A0D0A';  // Connection: close\r\n\r\n
 
         $qr_data = hex2bin($hex_data) . $user->id;
         $encodedData = urlencode(base64_encode($qr_data));
@@ -140,7 +140,6 @@ class AuthController extends Controller
             'user_id' => $user->id
         ]);
 
-        // Send email with QR code
         try {
             Mail::to($user->email)->send(new QrCodeMail(
                 $user->name,

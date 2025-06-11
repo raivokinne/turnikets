@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\StudentController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -36,10 +36,10 @@ Route::prefix('/v1')->group(function () {
     });
 
     Route::prefix('/students')->middleware('auth:sanctum')->group(function () {
-        Route::get('/', [UserController::class, 'getAllStudents']);
-        Route::post('/', [UserController::class, 'createStudent']);
-        Route::get('/{id}', [UserController::class, 'getStudent']);
-        Route::put('/{id}', [UserController::class, 'updateStudent']);
-        Route::delete('/{id}', [UserController::class, 'deleteStudent']);
+        Route::get('/', [StudentController::class, 'index']);
+        Route::post('/', [StudentController::class, 'store']);
+        Route::get('/{id}', [StudentController::class, 'show']);
+        Route::put('/{id}', [StudentController::class, 'update']);
+        Route::delete('/{id}', [StudentController::class, 'delete']);
     });
 });
