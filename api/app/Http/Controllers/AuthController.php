@@ -125,7 +125,8 @@ class AuthController extends Controller
 
         Student::query()->create([
             'class' => $request->class,
-            'user_id' => $user->id
+            'user_id' => $user->id,
+            'time' => date('H:i')
         ]);
 
         // Generate QR code data
