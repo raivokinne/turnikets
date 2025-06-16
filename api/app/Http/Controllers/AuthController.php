@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Mail\QrCodeMail;
 use App\Models\AccessCredential;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -120,6 +121,11 @@ class AuthController extends Controller
             'email' => $request->email,
             'class' => $request->class,
             'role' => 'student',
+        ]);
+
+        Student::query()->create([
+            'class' => $request->class,
+            'user_id' => $user->id
         ]);
 
         // Generate QR code data

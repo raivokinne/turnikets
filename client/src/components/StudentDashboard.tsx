@@ -1,18 +1,31 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import StudentHeader from './StudentHeader';
 import StudentList from './StudentList';
 import QuickActions from './QuickActions';
-import { getAttendanceData } from '@/data/attendanceData';
+import { Student } from '@/types/students';
+import { api } from '@/utils/api';
 
 const SimpleStudentDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
-  const attendanceData = getAttendanceData();
+  const [attendanceData, setAttendanceData] = useState<Student[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const data = await api.get('/students');
+        setAttendanceData(data.data as Student[]);
+      } catch (error) {
+        console.error('Failed to fetch attendance data:', error);
+      }
+    }
+    fetchData();
+  }, [searchQuery, selectedClass]);
 
   const classes = Array.from(new Set(attendanceData.map(student => student.class))).sort();
 
   const filteredStudents = attendanceData.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = student.user.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = !selectedClass || student.class === selectedClass;
     return matchesSearch && matchesClass;
   });
