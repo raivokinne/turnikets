@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, Clock } from 'lucide-react';
 import { Student } from '@/types/students';
 
@@ -6,34 +5,40 @@ interface StudentCardProps {
   student: Student;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
+const StudentCard = ({ student }: StudentCardProps) => {
   const isPresent = student.status === 'klātesošie';
 
-  const statusColor = isPresent ? 'bg-green-100' : 'bg-red-100';
-  const statusTextColor = isPresent ? 'text-green-700' : 'text-red-700';
-  const iconColor = isPresent ? 'text-green-500' : 'text-red-500';
-  const borderColor = isPresent ? 'border-green-200' : 'border-red-200';
+  const convertTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    return `${hours}:${minutes}`;
+  };
 
   return (
-    <div className={`p-2 w-64 rounded-lg border-2 ${borderColor} hover:shadow-md transition-shadow`}>
-      <div className="flex flex-col items-center text-center">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${statusColor}`}>
-          <User className={`h-5 w-5 ${iconColor}`} />
+    <div className={`group relative bg-white border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${isPresent ? 'border-black hover:border-gray-800' : 'border-gray-300 hover:border-gray-500'
+      } rounded-2xl p-6`}>
+      <div className="flex flex-col items-center text-center space-y-4">
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${isPresent ? 'bg-black text-white group-hover:bg-gray-800' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+          }`}>
+          <User className="h-8 w-8" />
         </div>
 
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{student.name}</h3>
+        <div className="space-y-2">
+          <h3 className="text-lg font-bold text-gray-900 leading-tight">{student.user.name}</h3>
+          <p className="text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
+            Klase {student.class}
+          </p>
+        </div>
 
-        <p className="text-lg text-gray-700 mb-3">
-          Klase: {student.class}
-        </p>
-
-        <div className={`py-2 px-4 rounded-full text-lg font-medium mb-2 ${statusColor} ${statusTextColor}`}>
+        <div className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${isPresent
+          ? 'bg-black text-white group-hover:bg-gray-800'
+          : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
+          }`}>
           {student.status}
         </div>
 
-        <div className="flex items-center text-gray-600 text-lg">
-          <Clock className="h-5 w-5 mr-2" />
-          {student.time}
+        <div className="flex items-center text-gray-500 text-sm font-medium">
+          <Clock className="h-4 w-4 mr-2" />
+          {convertTime(student.created_at.slice(11, 16))}
         </div>
       </div>
     </div>

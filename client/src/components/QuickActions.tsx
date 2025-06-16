@@ -9,7 +9,7 @@ const QuickActions: React.FC = () => {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showSendQRCode, setShowSendQRCode] = useState(false);
   const [students, setStudents] = useState(getAttendanceData());
-    console.log(students)
+  console.log(students)
 
   const handleAddStudent = (student: Student) => {
     const newStudent = {
@@ -37,7 +37,7 @@ const QuickActions: React.FC = () => {
         </h2>
         <div className="space-y-4">
           <button
-            className="w-full flex items-center justify-start p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-lg font-medium transition-colors"
+            className="w-full flex items-center justify-start p-4 bg-black hover:bg-gray-800 text-white rounded-lg text-lg font-medium transition-colors"
             onClick={() => setShowAddStudent(true)}
           >
             <User className="mr-3 h-6 w-6" />

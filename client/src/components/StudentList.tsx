@@ -8,21 +8,15 @@ interface StudentListProps {
 }
 
 const StudentList: React.FC<StudentListProps> = ({ students }) => {
-  const sortedStudents = [...students].sort((a, b) => {
-    if (a.status === 'prombūtne' && b.status !== 'prombūtne') return -1;
-    if (a.status !== 'prombūtne' && b.status === 'prombūtne') return 1;
-    return a.time.localeCompare(b.time);
-  });
-
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
       <h2 className="text-lg font-bold text-gray-900 mb-4">
         Šodienas apmeklējums
       </h2>
 
-      {sortedStudents.length > 0 ? (
+      {students.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {sortedStudents.map((student) => (
+          {students.map((student) => (
             <StudentCard key={student.id} student={student} />
           ))}
         </div>
