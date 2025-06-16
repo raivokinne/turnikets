@@ -1,45 +1,51 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\LogController;
+use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\StudentController;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('/v1')->group(function () {
-    Route::prefix('/guest')->group(function () {
-        Route::post('/login', [AuthController::class, 'login']);
-        Route::post('/users', [AuthController::class, 'createUser']);
-    });
+Route::group(['prefix' => 'auth'], function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/qr-scan', [AuthController::class, 'qrScan']);
+});
 
-    Route::prefix('/auth')->middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::group(['prefix' => 'auth'], function () {
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/user', function (Request $request) {
-            return response()->json([
-                'status' => 200,
-                'message' => 'User data retrieved successfully',
-                'data' => $request->user()
-            ]);
-        });
-
-        Route::get('/users', function () {
-            return response()->json([
-                'status' => 200,
-                'message' => 'List of Users',
-                'data' => User::all(),
-            ]);
-        });
-
-        Route::post('/profile/update', [AuthController::class, 'updateProfile']);
-
-        Route::post('/email/send', [AuthController::class, 'sendEmail']);
+        Route::post('/update-profile', [AuthController::class, 'updateProfile']);
+        Route::post('/create-user', [AuthController::class, 'createUser']);
+        Route::post('/send-email', [AuthController::class, 'sendEmail']);
     });
 
-    Route::prefix('/students')->middleware('auth:sanctum')->group(function () {
+    Route::group(['prefix' => 'qr'], function () {
+        Route::post('/store', [QrCodeController::class, 'store']);
+        Route::post('/update', [QrCodeController::class, 'update']);
+        Route::get('/show', [QrCodeController::class, 'show']);
+        Route::delete('/destroy', [QrCodeController::class, 'destroy']);
+    });
+
+    Route::group(['prefix' => 'students'], function () {
         Route::get('/', [StudentController::class, 'index']);
-        Route::post('/', [StudentController::class, 'store']);
-        Route::get('/{id}', [StudentController::class, 'show']);
-        Route::put('/{id}', [StudentController::class, 'update']);
-        Route::delete('/{id}', [StudentController::class, 'delete']);
+        Route::post('/store', [StudentController::class, 'store']);
+        Route::get('/show', [StudentController::class, 'show']);
+        Route::post('/update', [StudentController::class, 'update']);
+        Route::delete('/destroy', [StudentController::class, 'destroy']);
+        Route::get('/by-class', [StudentController::class, 'getByClass']);
+        Route::post('/update-status', [StudentController::class, 'updateStatus']);
+    });
+
+    Route::group(['prefix' => 'logs'], function () {
+        Route::get('/', [LogController::class, 'index']);
+        Route::get('/attendance-summary', [LogController::class, 'getAttendanceSummary']);
+        Route::get('/user-timeline', [LogController::class, 'getUserTimeline']);
+        Route::get('/current-occupancy', [LogController::class, 'getCurrentOccupancy']);
+    });
+
+    Route::get('/user', function (Request $request) {
+        return $request->user();
     });
 });
