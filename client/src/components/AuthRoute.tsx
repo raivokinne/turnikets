@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/providers/AuthProvider';
 import { Loader2 } from 'lucide-react';
+import { Navigate } from 'react-router';
 
 type AuthRouteProps = {
   children: ReactNode;
@@ -9,21 +9,22 @@ type AuthRouteProps = {
 
 export default function AuthRoute({ children }: AuthRouteProps) {
   const { authenticated, user } = useAuth();
-  const location = useLocation();
   const isLoading = authenticated && user === null;
-
-  const from = new URLSearchParams(location.search).get('redirect') || '/dashboard';
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (authenticated) {
-    return <Navigate to={from} replace />;
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user === null) {
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

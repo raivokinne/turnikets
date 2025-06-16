@@ -5,18 +5,18 @@ import Dashboard from "./screens/Dashboard";
 import Edit from "./screens/Profile/Edit";
 
 const router = createBrowserRouter([
-	{
-		path: "/",
-		element: <LoginPage />
-	},
-	{
-		path: "/dashboard",
-		element: <Dashboard />
-	},
-	{
-		path: "/profile",
-		element: <Edit />
-	}
+  {
+    path: "/login",
+    element: <LoginPage />
+  },
+  {
+    path: "/dashboard",
+    element: <Dashboard />
+  },
+  {
+    path: "/profile",
+    element: <Edit />
+  }
 ])
 
 export const AppRouter = () => <RouterProvider router={router} />

@@ -6,7 +6,7 @@ import {
 	User as UserIcon,
 	LogOut,
 } from 'lucide-react';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import AuthRoute from '@/components/AuthRoute';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ export default function Dashboard() {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
+
 	const isAdmin = user?.role === 'admin';
 
 	const handleLogout = async () => {
@@ -45,7 +46,7 @@ export default function Dashboard() {
 	};
 
 	return (
-		<ProtectedRoute>
+		<AuthRoute>
 			<div className="flex h-screen bg-gray-100">
 				<div className="flex-1 flex flex-col overflow-hidden">
 					<header className="bg-white shadow px-4">
@@ -115,6 +116,6 @@ export default function Dashboard() {
 					</main>
 				</div>
 			</div>
-		</ProtectedRoute>
+			</AuthRoute>
 	);
 }
