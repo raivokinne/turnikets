@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccessCredential extends Model
 {
+    protected $table = 'access_creadentials';
+
     protected $fillable = [
         'email',
         'qrcode_url',

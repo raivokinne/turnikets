@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Camera, Shield, User, ArrowLeft, Mail, Upload } from 'lucide-react';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import AuthRoute from '@/components/AuthRoute';
 
 export default function Edit() {
 	const { user } = useAuth();
@@ -113,7 +113,7 @@ export default function Edit() {
 	};
 
 	return (
-		<ProtectedRoute>
+		<AuthRoute>
 			<div className="container max-w-4xl mx-auto px-4 py-8 bg-gray-50/50 min-h-screen">
 				<div className="mb-8">
 					<Button
@@ -295,6 +295,6 @@ export default function Edit() {
 					</TabsContent>
 				</Tabs>
 			</div>
-		</ProtectedRoute>
+		</AuthRoute>
 	);
 }

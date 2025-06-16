@@ -1,3 +1,4 @@
+import { api } from "@/utils/api";
 import axios from "axios";
 
 interface SendEmailParams {
@@ -32,7 +33,7 @@ export const QRService = {
   },
 
   sendEmail: async (params: SendEmailParams): Promise<boolean> => {
-    const res = await axios.post(`http://localhost:8000/email/${params.id}/send`, params)
+    const res = await api.post(`/auth/email/send`, params)
 
     if (res.status === 200) {
         return true;

@@ -25,7 +25,6 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     const response = await api.post<ApiResponse<never>>("auth/logout");
-    // The logout endpoint now returns a success message instead of token data
     if (response.data.status !== 200) {
       throw new Error(response.data.message || 'Logout failed');
     }
