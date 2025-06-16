@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->enum('status', ['klātbutne', 'prombutnē'])->default('klātbutne');
             $table->string('class')->nullable();
+            $table->time('time');
             $table->timestamps();
         });
     }
