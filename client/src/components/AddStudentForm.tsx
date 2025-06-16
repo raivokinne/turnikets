@@ -64,9 +64,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
 
     const studentData: Omit<Student, 'id'> = {
       name: data.name,
-      class: data.class,
       email: data.email,
-      status: data.status || 'active',
+      class: data.class,
+      status: data.status || 'klātbutne',
       time: data.time || new Date().toISOString(),
     };
 
@@ -162,9 +162,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                 {...form.register('status')}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg bg-white"
               >
-                <option value="active">Aktīvs</option>
-                <option value="inactive">Neaktīvs</option>
-                <option value="pending">Gaida</option>
+                <option value="klātbutne">Klātbutne</option>
+                <option value="prombutnē">Prombutnē</option>
+                <option value="gaida">Gaida</option>
               </select>
               {form.formState.errors.status && (
                 <p className="text-red-500 text-sm mt-1">

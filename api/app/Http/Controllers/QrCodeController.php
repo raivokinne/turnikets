@@ -19,24 +19,24 @@ class QrCodeController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-            'qrcode_url' => 'required|url'
+            'to' => 'required|email|exists:students,email',
+            'attachmentUrl' => 'required|url'
         ]);
 
         if ($validator->fails()) {
             return $this->incorrectPayload($validator->errors());
         }
 
-        $user = User::where('email', $request->email)->first();
+        $student = Student::where('email', $request->to)->first();
 
-        if (!$user) {
+        if (!$student) {
             return response()->json([
                 'status' => 404,
-                'message' => 'User not found'
+                'message' => 'Student not found'
             ], 404);
         }
 
-        $existingCredential = AccessCredential::where('user_id', $user->id)->first();
+        $existingCredential = AccessCredential::where('student_id', $student->id)->first();
 
         if ($existingCredential) {
             return response()->json([
@@ -50,18 +50,18 @@ class QrCodeController extends Controller
 
         try {
             $accessCredential = AccessCredential::create([
-                'email' => $user->email,
-                'qrcode_url' => $request->qrcode_url,
-                'user_id' => $user->id
+                'email' => $student->email,
+                'qrcode_url' => $request->attachmentUrl,
+                'student_id' => $student->id
             ]);
 
             $emailSent = false;
             $emailMessage = '';
 
             try {
-                Mail::to($user->email)->send(new QrCodeMail(
-                    $user->name,
-                    $user->email,
+                Mail::to($student->email)->send(new QrCodeMail(
+                    $student->name,
+                    $student->email,
                     $accessCredential->qrcode_url,
                 ));
 
@@ -75,10 +75,10 @@ class QrCodeController extends Controller
                 'status' => 201,
                 'message' => 'QR code credential created successfully',
                 'data' => [
-                    'user_id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'class' => $user->class,
+                    'student_id' => $student->id,
+                    'name' => $student->name,
+                    'email' => $student->email,
+                    'class' => $student->class,
                     'qrcode_url' => $accessCredential->qrcode_url,
                     'email_sent' => $emailSent,
                     'email_message' => $emailMessage

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Log;
 use App\Models\Student;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -38,37 +38,35 @@ class StudentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'class' => 'required|string|max:255',
-            'status' => 'required|in:klātbutne,prombutnē',
-            'user_id' => 'required|integer|exists:users,id',
-            'time' => 'sometimes|date_format:H:i:s'
+            'status' => 'required|in:klātbutne,prombutnē,gaida',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
         ]);
 
         if ($validator->fails()) {
             return $this->incorrectPayload($validator->errors());
         }
 
-        // Check if student already exists for this user
-        $existingStudent = Student::where('user_id', $request->user_id)->first();
-
-        if ($existingStudent) {
-            return response()->json([
-                'status' => 409,
-                'message' => 'Student record already exists for this user'
-            ], 409);
-        }
-
         try {
             $student = Student::create([
                 'class' => $request->class,
                 'status' => $request->status,
-                'user_id' => $request->user_id,
-                'time' => $request->time ?? now()->format('H:i:s')
+                'name' => $request->name,
+                'email' => $request->email,
+                'time' => now()->format('H:i:s')
+            ]);
+
+            Log::create([
+                'student_id' => $student->id,
+                'action' => 'student_created',
+                'description' => 'Student created',
+                'time' => now()
             ]);
 
             return response()->json([
                 'status' => 201,
                 'message' => 'Student created successfully',
-                'data' => $student->load('user')
+                'data' => $student
             ], 201);
 
         } catch (\Exception $e) {

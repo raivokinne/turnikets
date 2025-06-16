@@ -10,23 +10,34 @@ const SimpleStudentDashboard: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [attendanceData, setAttendanceData] = useState<Student[]>([]);
 
+  console.log('attendanceData:', attendanceData);
+
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await api.get('/students');
-        setAttendanceData(data.data as Student[]);
+        const resp = await api.get('/logs');
+        const studentLogs = resp.data?.data?.data ?? [];
+
+        const students = studentLogs
+          .map((log: any) => log.student)
+          .filter(Boolean);
+
+        setAttendanceData(students);
       } catch (error) {
         console.error('Failed to fetch attendance data:', error);
+        setAttendanceData([]);
       }
     }
     fetchData();
-  }, [searchQuery, selectedClass]);
+  }, []);
 
-  const classes = Array.from(new Set(attendanceData.map(student => student.class))).sort();
+  const classes = Array.from(new Set(attendanceData.map(s => s.class ?? ''))).sort();
 
   const filteredStudents = attendanceData.filter(student => {
-    const matchesSearch = student.user.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesClass = !selectedClass || student.class === selectedClass;
+    const name = student.name ?? '';
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+    const cls = student.class ?? '';
+    const matchesClass = !selectedClass || cls === selectedClass;
     return matchesSearch && matchesClass;
   });
 
@@ -45,7 +56,6 @@ const SimpleStudentDashboard: React.FC = () => {
         <div className="lg:col-span-3">
           <StudentList students={filteredStudents} />
         </div>
-
         <div className="lg:col-span-1">
           <QuickActions />
         </div>
@@ -55,3 +65,4 @@ const SimpleStudentDashboard: React.FC = () => {
 };
 
 export default SimpleStudentDashboard;
+

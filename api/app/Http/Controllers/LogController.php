@@ -17,7 +17,7 @@ class LogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'sometimes|integer|exists:users,id',
+            'student_id' => 'sometimes|integer|exists:students,id',
             'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created',
             'date' => 'sometimes|date_format:Y-m-d',
             'start_date' => 'sometimes|date_format:Y-m-d',
@@ -31,10 +31,10 @@ class LogController extends Controller
         }
 
         try {
-            $query = Log::with('user');
+            $query = Log::with('student');
 
-            if ($request->has('user_id')) {
-                $query->where('user_id', $request->user_id);
+            if ($request->has('student_id')) {
+                $query->where('student_id', $request->student_id);
             }
 
             if ($request->has('action')) {
@@ -53,7 +53,7 @@ class LogController extends Controller
             }
 
             if ($request->has('class')) {
-                $query->whereHas('user', function($q) use ($request) {
+                $query->whereHas('student', function($q) use ($request) {
                     $q->where('class', $request->class);
                 });
             }
@@ -92,7 +92,7 @@ class LogController extends Controller
         $date = $request->get('date', now()->format('Y-m-d'));
 
         try {
-            $query = Log::with('user')
+            $query = Log::with('student')
                 ->whereDate('time', $date)
                 ->whereIn('action', ['entry', 'exit']);
 
@@ -106,10 +106,10 @@ class LogController extends Controller
 
             $attendance = [];
             foreach ($logs as $log) {
-                $userId = $log->user_id;
+                $userId = $log->student_id;
                 if (!isset($attendance[$userId])) {
                     $attendance[$userId] = [
-                        'user' => $log->user,
+                        'student' => $log->student,
                         'entries' => [],
                         'exits' => [],
                         'total_time' => 0,

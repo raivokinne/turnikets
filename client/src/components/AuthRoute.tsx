@@ -1,15 +1,14 @@
 import { ReactNode } from 'react';
-import { useAuth } from '@/providers/AuthProvider';
 import { Loader2 } from 'lucide-react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
+import { storage } from '@/utils/storage';
 
 type AuthRouteProps = {
   children: ReactNode;
 };
 
 export default function AuthRoute({ children }: AuthRouteProps) {
-  const { authenticated, user } = useAuth();
-  const isLoading = authenticated && user === null;
+  const isLoading = !storage.get<string>("token");
 
   if (isLoading) {
     return (
@@ -19,13 +18,10 @@ export default function AuthRoute({ children }: AuthRouteProps) {
     );
   }
 
-  if (!authenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user === null) {
+  if (!storage.get<string>("token")) {
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 }
+

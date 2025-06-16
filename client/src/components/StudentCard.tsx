@@ -8,11 +8,6 @@ interface StudentCardProps {
 const StudentCard = ({ student }: StudentCardProps) => {
   const isPresent = student.status === 'klātesošie';
 
-  const convertTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
-    return `${hours}:${minutes}`;
-  };
-
   return (
     <div className={`group relative bg-white border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${isPresent ? 'border-black hover:border-gray-800' : 'border-gray-300 hover:border-gray-500'
       } rounded-2xl p-6`}>
@@ -23,7 +18,7 @@ const StudentCard = ({ student }: StudentCardProps) => {
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-lg font-bold text-gray-900 leading-tight">{student.user.name}</h3>
+          <h3 className="text-lg font-bold text-gray-900 leading-tight">{student.name}</h3>
           <p className="text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
             Klase {student.class}
           </p>
@@ -38,7 +33,7 @@ const StudentCard = ({ student }: StudentCardProps) => {
 
         <div className="flex items-center text-gray-500 text-sm font-medium">
           <Clock className="h-4 w-4 mr-2" />
-          {convertTime(student.created_at.slice(11, 16))}
+          {student.time}
         </div>
       </div>
     </div>
