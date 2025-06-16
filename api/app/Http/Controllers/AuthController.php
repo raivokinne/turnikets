@@ -41,7 +41,6 @@ class AuthController extends Controller
         Auth::login($user);
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Log the login activity
         Log::create([
             'user_id' => $user->id,
             'action' => 'login',
@@ -69,7 +68,6 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        // Log the logout activity
         Log::create([
             'user_id' => $request->user()->id,
             'action' => 'logout',
@@ -310,17 +308,5 @@ class AuthController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Helper method for incorrect payload response
-     */
-    private function incorrectPayload($errors): JsonResponse
-    {
-        return response()->json([
-            'status' => 422,
-            'message' => 'Validation failed',
-            'errors' => $errors
-        ], 422);
     }
 }
