@@ -37,7 +37,7 @@ export const QRService = {
     studentName: string,
     studentClass: string,
   ): string => {
-    return `${studentName}-${studentClass}-${studentId}-${Date.now()}`;
+    return `${studentName}-${studentClass}-${studentId}-${Math.random()}`;
   },
 
   sendEmail: async (params: SendEmailParams): Promise<boolean> => {
