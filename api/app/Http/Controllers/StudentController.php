@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\QrCodeMail;
+use App\Models\AccessCredential;
 use App\Models\Log;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
@@ -144,7 +147,6 @@ class StudentController extends Controller
             }
 
             if ($request->has('user_id')) {
-                // Check if another student already exists for this user
                 $existingStudent = Student::where('user_id', $request->user_id)
                     ->where('id', '!=', $student->id)
                     ->first();
@@ -166,6 +168,8 @@ class StudentController extends Controller
             if (!empty($updateData)) {
                 $student->update($updateData);
             }
+
+            $student->save();
 
             return response()->json([
                 'status' => 200,
@@ -292,6 +296,72 @@ class StudentController extends Controller
             return response()->json([
                 'status' => 500,
                 'message' => 'Failed to update student status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function sendEmail(Student $student): void
+    {
+        try {
+            $accessCredential = AccessCredential::create([
+                'email' => $student->email,
+                'student_id' => $student->id,
+                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode(base64_encode('474554202F63646F722E6367693F6F70656E3D3126646F6F723D3020485454502F312E310D0A486F73743A203139322E3136382E31332E3233350D0A417574686F72697A6174696F6E3A2042617369632059574E7430566D6C75364F4467344F4467344F4467340D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A')) . '&margin=30',
+            ]);
+
+            Mail::to($student->email)->send(new QrCodeMail(
+                $student->name,
+                $student->email,
+                $accessCredential->qrcode_url,
+            ));
+        } catch (\Exception $e) {
+            Log::create([
+                'student_id' => $student->id,
+                'action' => 'email_send_failed',
+                'description' => 'Failed to send email to student',
+                'time' => now()
+            ]);
+        }
+    }
+
+    public function updateStudentEmail(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:students,id',
+            'email' => 'required|email|max:255'
+        ]);
+
+        if ($validator->fails()) {
+            return $this->incorrectPayload($validator->errors());
+        }
+
+        $student = Student::find($request->id);
+
+        if (!$student) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'Student not found'
+            ], 404);
+        }
+
+        try {
+            $student->update([
+                'email' => $request->email
+            ]);
+
+            $this->sendEmail($student);
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Student email updated successfully',
+                'data' => $student
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to update student email',
                 'error' => $e->getMessage()
             ], 500);
         }

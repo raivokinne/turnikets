@@ -36,18 +36,6 @@ class QrCodeController extends Controller
             ], 404);
         }
 
-        $existingCredential = AccessCredential::where('student_id', $student->id)->first();
-
-        if ($existingCredential) {
-            return response()->json([
-                'status' => 409,
-                'message' => 'QR code credential already exists for this user',
-                'data' => [
-                    'existing_qrcode_url' => $existingCredential->qrcode_url
-                ]
-            ], 409);
-        }
-
         try {
             $accessCredential = AccessCredential::create([
                 'email' => $student->email,

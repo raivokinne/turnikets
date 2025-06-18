@@ -1,5 +1,3 @@
-import { User } from "./auth";
-
 export interface Student {
   id: number;
   status: string;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Log;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -172,7 +173,7 @@ class LogController extends Controller
     public function getUserTimeline(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer|exists:users,id',
+            'student_id' => 'required|integer|exists:users,id',
             'date' => 'sometimes|date_format:Y-m-d'
         ]);
 
@@ -183,8 +184,8 @@ class LogController extends Controller
         $date = $request->get('date', now()->format('Y-m-d'));
 
         try {
-            $logs = Log::with('user')
-                ->where('user_id', $request->user_id)
+            $logs = Log::with('student')
+                ->where('student_id', $request->user_id)
                 ->whereDate('time', $date)
                 ->orderBy('time', 'asc')
                 ->get();
@@ -215,7 +216,7 @@ class LogController extends Controller
     public function getCurrentOccupancy(): JsonResponse
     {
         try {
-            $presentUsers = User::where('status', 'klātbutne')
+            $presentUsers = Student::where('status', 'klātbutne')
                 ->where('role', 'student')
                 ->with(['logs' => function($query) {
                     $query->whereDate('time', now())
@@ -224,15 +225,15 @@ class LogController extends Controller
                 }])
                 ->get();
 
-            $occupancyByClass = $presentUsers->groupBy('class')->map(function($users, $class) {
+            $occupancyByClass = $presentUsers->groupBy('class')->map(function($students, $class) {
                 return [
                     'class' => $class,
-                    'count' => $users->count(),
-                    'students' => $users->map(function($user) {
+                    'count' => $students->count(),
+                    'students' => $students->map(function($student) {
                         return [
-                            'id' => $user->id,
-                            'name' => $user->name,
-                            'last_entry' => $user->logs->first() ? $user->logs->first()->time : null
+                            'id' => $student->id,
+                            'name' => $student->name,
+                            'last_entry' => $student->logs->first() ? $student->logs->first()->time : null
                         ];
                     })
                 ];

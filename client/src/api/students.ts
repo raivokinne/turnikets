@@ -27,7 +27,7 @@ class StudentsApi {
     return headers;
   }
 
-  private getMultipartHeaders(): Record<string, string> {
+  getMultipartHeaders(): Record<string, string> {
     const token = storage.get("token");
     const headers: Record<string, string> = {
       Accept: "application/json",
