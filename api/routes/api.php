@@ -4,8 +4,15 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\GateController;
+
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Console;
+
+Route::post("/AcsDataApi/RequestStatus", [GateController::class, "RequestStatus"]);
+Route::post("/AcsDataApi/RequestCardEvent", [GateController::class, "RequestCardEvent"]);
 
 Route::group(['prefix' => 'auth'], function () {
     Route::post('/login', [AuthController::class, 'login']);
