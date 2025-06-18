@@ -29,9 +29,12 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   const queryClient = useQueryClient();
-  const [authenticated, setAuthenticated] = useState<boolean>(
-      !!storage.get("token")
-  );
+  const [authenticated, setAuthenticated] = useState<boolean>(() => {
+    if (storage.get("token")) {
+      return true;
+    }
+    return false;
+  });
 
   const { data: user }: UseQueryResult<User | null> = useQuery({
     queryKey: ['user'],
@@ -54,9 +57,9 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   });
 
   const loginMutation: UseMutationResult<
-      AuthResponse,
-      Error,
-      AuthCredentials
+    AuthResponse,
+    Error,
+    AuthCredentials
   > = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data: AuthResponse) => {
@@ -67,8 +70,8 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
         queryClient.invalidateQueries({ queryKey: ['user'] });
       } else {
         toast.error(data.errors ?
-            (typeof data.errors === 'string' ? data.errors : 'Validation errors') :
-            data.message
+          (typeof data.errors === 'string' ? data.errors : 'Validation errors') :
+          data.message
         );
       }
     },
@@ -80,9 +83,9 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   });
 
   const logoutMutation: UseMutationResult<
-      void,
-      Error,
-      void
+    void,
+    Error,
+    void
   > = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
@@ -107,14 +110,14 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   }, [logoutMutation]);
 
   return (
-      <AuthContext.Provider value={{
-        user: user || null,
-        authenticated,
-        login,
-        logout
-      }}>
-        {children}
-      </AuthContext.Provider>
+    <AuthContext.Provider value={{
+      user: user || null,
+      authenticated,
+      login,
+      logout
+    }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

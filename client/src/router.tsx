@@ -6,7 +6,7 @@ import Edit from "./screens/Profile/Edit";
 
 const router = createBrowserRouter([
   {
-    path: "/login",
+    path: "/",
     element: <LoginPage />
   },
   {

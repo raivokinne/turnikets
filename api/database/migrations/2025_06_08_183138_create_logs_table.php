@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::create('logs', function (Blueprint $table) {
             $table->id();
             $table->timestamp('time');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('student_id')->constrained()->onDelete('cascade');
             $table->string('action')->nullable();
             $table->text('description')->nullable();
             $table->timestamps();

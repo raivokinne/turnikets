@@ -41,13 +41,6 @@ class AuthController extends Controller
         Auth::login($user);
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        Log::create([
-            'user_id' => $user->id,
-            'action' => 'login',
-            'description' => 'User logged in via web interface',
-            'time' => now()
-        ]);
-
         return response()->json([
             'status' => 200,
             'message' => 'User successfully logged in',
@@ -56,9 +49,6 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role,
-                'class' => $user->class,
-                'status' => $user->status
             ]
         ]);
     }
@@ -68,13 +58,6 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        Log::create([
-            'user_id' => $request->user()->id,
-            'action' => 'logout',
-            'description' => 'User logged out',
-            'time' => now()
-        ]);
-
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

@@ -27,7 +27,7 @@ class StudentsApi {
     return headers;
   }
 
-  private getMultipartHeaders(): Record<string, string> {
+  getMultipartHeaders(): Record<string, string> {
     const token = storage.get("token");
     const headers: Record<string, string> = {
       Accept: "application/json",
@@ -48,7 +48,7 @@ class StudentsApi {
       const headers = this.getAuthHeaders();
       console.log("headers:", headers);
 
-      const response = await fetch(`${API_BASE_URL}guest/users`, {
+      const response = await fetch(`${API_BASE_URL}students/store`, {
         method: "POST",
         headers,
         body: JSON.stringify(studentData),
@@ -74,7 +74,7 @@ class StudentsApi {
   }
 
   async getAll(): Promise<Student[]> {
-    const response = await fetch(`${API_BASE_URL}/v1/students`, {
+    const response = await fetch(`${API_BASE_URL}students`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -88,7 +88,7 @@ class StudentsApi {
   }
 
   async getById(id: string | number): Promise<Student> {
-    const response = await fetch(`${API_BASE_URL}/v1/students/${id}`, {
+    const response = await fetch(`${API_BASE_URL}students/${id}/show`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -105,7 +105,7 @@ class StudentsApi {
     id: string | number,
     studentData: Partial<Student>,
   ): Promise<Student> {
-    const response = await fetch(`${API_BASE_URL}/v1/students/${id}`, {
+    const response = await fetch(`${API_BASE_URL}students/${id}/update`, {
       method: "PUT",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(studentData),
@@ -125,7 +125,7 @@ class StudentsApi {
   }
 
   async delete(id: string | number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/v1/students/${id}`, {
+    const response = await fetch(`${API_BASE_URL}students/${id}/destroy`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });
@@ -148,7 +148,7 @@ class StudentsApi {
     email_sent: boolean;
     email_message: string;
   }> {
-    const response = await fetch(`${API_BASE_URL}/v1/guest/users`, {
+    const response = await fetch(`${API_BASE_URL}create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -227,4 +227,3 @@ class StudentsApi {
 }
 
 export const studentsApi = new StudentsApi();
-

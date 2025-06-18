@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Log;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class LogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'sometimes|integer|exists:users,id',
+            'student_id' => 'sometimes|integer|exists:students,id',
             'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created',
             'date' => 'sometimes|date_format:Y-m-d',
             'start_date' => 'sometimes|date_format:Y-m-d',
@@ -31,10 +32,10 @@ class LogController extends Controller
         }
 
         try {
-            $query = Log::with('user');
+            $query = Log::with('student');
 
-            if ($request->has('user_id')) {
-                $query->where('user_id', $request->user_id);
+            if ($request->has('student_id')) {
+                $query->where('student_id', $request->student_id);
             }
 
             if ($request->has('action')) {
@@ -53,7 +54,7 @@ class LogController extends Controller
             }
 
             if ($request->has('class')) {
-                $query->whereHas('user', function($q) use ($request) {
+                $query->whereHas('student', function($q) use ($request) {
                     $q->where('class', $request->class);
                 });
             }
@@ -92,7 +93,7 @@ class LogController extends Controller
         $date = $request->get('date', now()->format('Y-m-d'));
 
         try {
-            $query = Log::with('user')
+            $query = Log::with('student')
                 ->whereDate('time', $date)
                 ->whereIn('action', ['entry', 'exit']);
 
@@ -106,10 +107,10 @@ class LogController extends Controller
 
             $attendance = [];
             foreach ($logs as $log) {
-                $userId = $log->user_id;
+                $userId = $log->student_id;
                 if (!isset($attendance[$userId])) {
                     $attendance[$userId] = [
-                        'user' => $log->user,
+                        'student' => $log->student,
                         'entries' => [],
                         'exits' => [],
                         'total_time' => 0,
@@ -172,7 +173,7 @@ class LogController extends Controller
     public function getUserTimeline(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer|exists:users,id',
+            'student_id' => 'required|integer|exists:users,id',
             'date' => 'sometimes|date_format:Y-m-d'
         ]);
 
@@ -183,8 +184,8 @@ class LogController extends Controller
         $date = $request->get('date', now()->format('Y-m-d'));
 
         try {
-            $logs = Log::with('user')
-                ->where('user_id', $request->user_id)
+            $logs = Log::with('student')
+                ->where('student_id', $request->user_id)
                 ->whereDate('time', $date)
                 ->orderBy('time', 'asc')
                 ->get();
@@ -215,7 +216,7 @@ class LogController extends Controller
     public function getCurrentOccupancy(): JsonResponse
     {
         try {
-            $presentUsers = User::where('status', 'klātbutne')
+            $presentUsers = Student::where('status', 'klātbutne')
                 ->where('role', 'student')
                 ->with(['logs' => function($query) {
                     $query->whereDate('time', now())
@@ -224,15 +225,15 @@ class LogController extends Controller
                 }])
                 ->get();
 
-            $occupancyByClass = $presentUsers->groupBy('class')->map(function($users, $class) {
+            $occupancyByClass = $presentUsers->groupBy('class')->map(function($students, $class) {
                 return [
                     'class' => $class,
-                    'count' => $users->count(),
-                    'students' => $users->map(function($user) {
+                    'count' => $students->count(),
+                    'students' => $students->map(function($student) {
                         return [
-                            'id' => $user->id,
-                            'name' => $user->name,
-                            'last_entry' => $user->logs->first() ? $user->logs->first()->time : null
+                            'id' => $student->id,
+                            'name' => $student->name,
+                            'last_entry' => $student->logs->first() ? $student->logs->first()->time : null
                         ];
                     })
                 ];

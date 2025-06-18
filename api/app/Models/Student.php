@@ -3,20 +3,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Student extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'status',
         'class',
         'time',
+        'name',
+        'email'
     ];
 
-    public function user()
+    public function logs(): HasMany
     {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(Log::class);
+    }
+
+    public function accessCredentials(): HasMany
+    {
+        return $this->hasMany(AccessCredential::class);
     }
 }

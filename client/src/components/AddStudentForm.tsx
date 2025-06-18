@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { X, AlertCircle } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Student } from '@/types/students';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { AlertCircle, X } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Student } from "@/types/students";
 
-import { studentsApi } from '@/api/students';
+import { studentsApi } from "@/api/students";
 
 interface AddStudentFormProps {
   onClose: () => void;
@@ -18,55 +18,57 @@ interface AddStudentFormProps {
 }
 
 const studentSchema = z.object({
-  name: z.string().min(1, { message: 'Vārds un uzvārds ir obligāts' }),
-  class: z.string().min(1, { message: 'Klase ir obligāta' }),
-  email: z.string().email({ message: 'Lūdzu ievadiet derīgu e-pasta adresi' }),
+  name: z.string().min(1, { message: "Vārds un uzvārds ir obligāts" }),
+  class: z.string().min(1, { message: "Klase ir obligāta" }),
+  email: z.string().email({ message: "Lūdzu ievadiet derīgu e-pasta adresi" }),
   status: z.string().optional(),
   time: z.string().optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
 
-const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) => {
+const AddStudentForm: React.FC<AddStudentFormProps> = (
+  { onClose, onSubmit },
+) => {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
-      name: '',
-      class: '',
-      email: '',
-      status: 'active',
+      name: "",
+      class: "",
+      email: "",
+      status: "active",
       time: new Date().toISOString(),
     },
   });
 
   const createStudentMutation = useMutation({
-    // Fix: Use arrow function to preserve context
-    mutationFn: (studentData: Omit<Student, 'id'>) => studentsApi.create(studentData),
+    mutationFn: (studentData: Omit<Student, "id">) =>
+      studentsApi.create(studentData),
     onSuccess: (data: Student) => {
-      toast.success('Skolēns veiksmīgi pievienots!');
-      queryClient.invalidateQueries({ queryKey: ['students'] });
+      toast.success("Skolēns veiksmīgi pievienots!");
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       onSubmit?.(data);
       onClose();
     },
     onError: (error: Error) => {
-      console.error('Create student error:', error);
-      const errorMessage = error.message || 'Kļūda pievienojot skolēnu';
+      console.error("Create student error:", error);
+      const errorMessage = error.message || "Kļūda pievienojot skolēnu";
       setError(errorMessage);
       toast.error(errorMessage);
-    }
+    },
   });
 
   const handleSubmit = async (data: StudentFormValues) => {
     setError(null);
 
-    const studentData: Omit<Student, 'id'> = {
+    const studentData: Omit<Student, "id"> = {
       name: data.name,
-      class: data.class,
       email: data.email,
-      status: data.status || 'active',
+      class: data.class,
+      status: data.status || "klātbutne",
       time: data.time || new Date().toISOString(),
     };
 
@@ -97,9 +99,15 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             </Alert>
           )}
 
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Vārds un uzvārds
               </label>
               <Input
@@ -107,7 +115,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                 type="text"
                 placeholder="Ievadiet skolēna vārdu..."
                 disabled={createStudentMutation.isPending}
-                {...form.register('name')}
+                {...form.register("name")}
               />
               {form.formState.errors.name && (
                 <p className="text-red-500 text-sm mt-1">
@@ -117,7 +125,10 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             </div>
 
             <div>
-              <label htmlFor="class" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="class"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Klase
               </label>
               <Input
@@ -125,7 +136,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                 type="text"
                 placeholder="Piemēram: 12B"
                 disabled={createStudentMutation.isPending}
-                {...form.register('class')}
+                {...form.register("class")}
               />
               {form.formState.errors.class && (
                 <p className="text-red-500 text-sm mt-1">
@@ -135,7 +146,10 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 E-pasts
               </label>
               <Input
@@ -143,7 +157,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                 type="email"
                 placeholder="skolens@skola.lv"
                 disabled={createStudentMutation.isPending}
-                {...form.register('email')}
+                {...form.register("email")}
               />
               {form.formState.errors.email && (
                 <p className="text-red-500 text-sm mt-1">
@@ -153,18 +167,21 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             </div>
 
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="status"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Statuss
               </label>
               <select
                 id="status"
                 disabled={createStudentMutation.isPending}
-                {...form.register('status')}
+                {...form.register("status")}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg bg-white"
               >
-                <option value="active">Aktīvs</option>
-                <option value="inactive">Neaktīvs</option>
-                <option value="pending">Gaida</option>
+                <option value="klātbutne">Klātbutne</option>
+                <option value="prombutnē">Prombutnē</option>
+                <option value="gaida">Gaida</option>
               </select>
               {form.formState.errors.status && (
                 <p className="text-red-500 text-sm mt-1">
@@ -188,7 +205,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                 disabled={createStudentMutation.isPending}
                 className="flex-1"
               >
-                {createStudentMutation.isPending ? "Pievieno..." : "Pievienot skolēnu"}
+                {createStudentMutation.isPending
+                  ? "Pievieno..."
+                  : "Pievienot skolēnu"}
               </Button>
             </div>
           </form>

@@ -2,11 +2,11 @@ import { api } from "@/utils/api";
 import axios from "axios";
 
 interface SendEmailParams {
-    to: string;
-    attachmentUrl?: string;
-    id: number;
-    name: string;
-    class: string;
+  to: string;
+  attachmentUrl?: string;
+  id: number;
+  name: string;
+  class: string;
 }
 
 export const QRService = {
@@ -17,7 +17,11 @@ export const QRService = {
    * @param margin The margin around the QR code (default: 30)
    * @returns URL of the generated QR code
    */
-  generateQRCodeUrl: (data: string, size: string = '200x200', margin: number = 30): string => {
+  generateQRCodeUrl: (
+    data: string,
+    size: string = "200x200",
+    margin: number = 30,
+  ): string => {
     return `https://api.qrserver.com/v1/create-qr-code/?size=${size}&data=${encodeURIComponent(data)}&margin=${margin}`;
   },
 
@@ -28,15 +32,19 @@ export const QRService = {
    * @param studentClass Student's class
    * @returns A unique string to be encoded in the QR code
    */
-  generateQRCodeData: (studentId: number, studentName: string, studentClass: string): string => {
+  generateQRCodeData: (
+    studentId: number,
+    studentName: string,
+    studentClass: string,
+  ): string => {
     return `${studentName}-${studentClass}-${studentId}-${Date.now()}`;
   },
 
   sendEmail: async (params: SendEmailParams): Promise<boolean> => {
-    const res = await api.post(`/auth/email/send`, params)
+    const res = await api.post(`/qr/store`, params);
 
     if (res.status === 200) {
-        return true;
+      return true;
     }
     return false;
   },
@@ -53,10 +61,14 @@ export const QRService = {
     studentName: string,
     studentClass: string,
     studentEmail: string,
-    studentId: number
+    studentId: number,
   ): Promise<boolean> => {
     try {
-      const qrData = QRService.generateQRCodeData(studentId, studentName, studentClass);
+      const qrData = QRService.generateQRCodeData(
+        studentId,
+        studentName,
+        studentClass,
+      );
 
       const qrUrl = QRService.generateQRCodeUrl(qrData);
 
@@ -65,15 +77,15 @@ export const QRService = {
         attachmentUrl: qrUrl,
         name: studentName,
         id: studentId,
-        class: studentClass
+        class: studentClass,
       });
 
       return true;
     } catch (error) {
-      console.error('Error sending QR code:', error);
+      console.error("Error sending QR code:", error);
       return false;
     }
-  }
+  },
 };
 
 export default QRService;

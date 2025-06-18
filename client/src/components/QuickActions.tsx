@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, QrCode } from 'lucide-react';
 import AddStudentForm from './AddStudentForm';
 import SendQRCodeModal from './SendQRCodeModal';
-import { getAttendanceData } from '@/data/attendanceData';
 import { Student } from '@/types/students';
+import { api } from '@/utils/api';
 
 const QuickActions: React.FC = () => {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showSendQRCode, setShowSendQRCode] = useState(false);
-  const [students, setStudents] = useState(getAttendanceData());
-  console.log(students)
+  const [students, setStudents] = useState<Student[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const resp = await api.get('/logs');
+        const studentLogs = resp.data?.data?.data ?? [];
+
+        const students = studentLogs
+          .map((log: any) => log.student)
+          .filter(Boolean);
+
+        setStudents(students);
+      } catch (error) {
+        console.error('Failed to fetch attendance data:', error);
+        setStudents([]);
+      }
+    }
+    fetchData();
+  }, []);
 
   const handleAddStudent = (student: Student) => {
     const newStudent = {

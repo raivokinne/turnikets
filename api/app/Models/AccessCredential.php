@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AccessCredential extends Model
 {
@@ -11,11 +12,11 @@ class AccessCredential extends Model
     protected $fillable = [
         'email',
         'qrcode_url',
-        'user_id',
+        'student_id'
     ];
 
-    public function user()
+    public function student(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Student::class);
     }
 }

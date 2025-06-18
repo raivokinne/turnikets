@@ -11,8 +11,9 @@ return new class extends Migration {
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->enum('status', ['klātbutne', 'prombutnē'])->default('klātbutne');
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
             $table->string('class')->nullable();
             $table->time('time');
             $table->timestamps();
