@@ -2,29 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessCredential;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class GateController extends Controller
 {
-    public function RequestCardEvent(Request $request)
+    public function RequestCardEvent(Request $request): void
     {
-        this.OpenGate(0);
-        this.OpenGate(1);
-        foreach ($request->all() as $key => $value) {
-            error_log($key.': '.$value);
-        }
-
-    }
-
-    public function RequestStatus(Request $request)
-    {
-        foreach ($request->all() as $key => $value) {
-            error_log($key.': '.$value);
+        $card = $request->all()['Card'];
+        $access = AccessCredential::query()->where('random_string', $card)->first();
+        if ($access) {
+            $this->OpenGate($access->door);
         }
     }
 
-    private function OpenGate(number $gate)
+    public function RequestStatus(Request $request): void
+    {
+        foreach ($request->all() as $key => $value) {
+            error_log($key.': '.$value);
+        }
+    }
+
+    private function OpenGate(int $gate): Response
     {
         return Http::get(env(GATE_URL), [
             'open' => 1,
@@ -32,7 +33,7 @@ class GateController extends Controller
         ]);
     }
 
-    private function CloseGate(number $gate)
+    private function CloseGate(int $gate): Response
     {
         return Http::get(env(GATE_URL), [
             'open' => 0,
@@ -40,7 +41,7 @@ class GateController extends Controller
         ]);
     }
 
-    private function OpenBothGate()
+    private function OpenBothGate(): void
     {
         Http::get(env(GATE_URL), [
             'open' => 1,
@@ -52,7 +53,7 @@ class GateController extends Controller
         ]);
     }
 
-    private function CloseBothGate()
+    private function CloseBothGate(): void
     {
         Http::get(env(GATE_URL), [
             'open' => 0,
