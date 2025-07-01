@@ -42,7 +42,7 @@ class QrCodeController extends Controller
                 'email' => $student->email,
                 'qrcode_url' => $request->attachmentUrl,
                 'student_id' => $student->id,
-                'random_string' => Str::random(16),
+                'uuid' => Str::uuid()->toString(),
             ]);
 
             $emailSent = false;
