@@ -12,7 +12,7 @@ class GateController extends Controller
     public function RequestCardEvent(Request $request): void
     {
         $card = $request->all()['Card'];
-        $access = AccessCredential::query()->where('random_string', $card)->first();
+        $access = AccessCredential::query()->where('uuid', $card)->first();
         if ($access) {
             $this->OpenGate($request->all()['IP']);
         }
