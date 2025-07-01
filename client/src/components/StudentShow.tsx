@@ -40,6 +40,22 @@ export function StudentShow({ student, setShow, show }: StudentShowProps) {
         }
     };
 
+    const handleDelete = async (e: FormEvent) => {
+        e.preventDefault();
+
+        try {
+            await api.post("/students/destroy", {
+                _method: "DELETE",
+                id: student.id,
+            });
+
+            setShow(false);
+        } catch (error) {
+            toast.error("Neizdevās izdēst studentu");
+            console.error("Neizdevās izdēst studentu:", error);
+        }
+    };
+
     return (
         <Dialog open={show} onOpenChange={setShow}>
             <DialogContent className="sm:max-w-md">
@@ -100,11 +116,18 @@ export function StudentShow({ student, setShow, show }: StudentShowProps) {
                     </CardContent>
                 </Card>
 
-                <form onSubmit={handleSubmit} className="flex gap-2 pt-4 w-full">
-                    <Button className="flex-1 w-full">
-                        Rediģēt
-                    </Button>
-                </form>
+                <div className="flex gap-4">
+                    <form onSubmit={handleSubmit} className="flex gap-2 pt-4 w-full">
+                        <Button className="flex-1 w-full">
+                            Rediģēt
+                        </Button>
+                    </form>
+                    <form onSubmit={handleDelete} className="flex gap-2 pt-4 w-full">
+                        <Button className="flex-1 w-full">
+                            Dzēst
+                        </Button>
+                    </form>
+                </div>
             </DialogContent>
         </Dialog>
     );

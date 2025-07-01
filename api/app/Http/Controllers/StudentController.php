@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
@@ -209,6 +210,10 @@ class StudentController extends Controller
         }
 
         try {
+            $existsAccess = AccessCredential::query()->where('student_id', $student->id)->get();
+            foreach ($existsAccess as $as) {
+                $as->delete();
+            }
             $student->delete();
 
             return response()->json([
@@ -308,6 +313,7 @@ class StudentController extends Controller
                 'email' => $student->email,
                 'student_id' => $student->id,
                 'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.urlencode(base64_encode('474554202F63646F722E6367693F6F70656E3D3126646F6F723D3020485454502F312E310D0A486F73743A203139322E3136382E31332E3233350D0A417574686F72697A6174696F6E3A2042617369632059574E7430566D6C75364F4467344F4467344F4467340D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A')).'&margin=30',
+                'random_string' => Str::random(16),
             ]);
 
             Mail::to($student->email)->send(new QrCodeMail(

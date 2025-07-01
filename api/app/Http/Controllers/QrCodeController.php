@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class QrCodeController extends Controller
 {
@@ -20,7 +21,7 @@ class QrCodeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'to' => 'required|email|exists:students,email',
-            'attachmentUrl' => 'required|url'
+            'attachmentUrl' => 'required|url',
         ]);
 
         if ($validator->fails()) {
@@ -29,10 +30,10 @@ class QrCodeController extends Controller
 
         $student = Student::where('email', $request->to)->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'status' => 404,
-                'message' => 'Student not found'
+                'message' => 'Student not found',
             ], 404);
         }
 
@@ -40,7 +41,8 @@ class QrCodeController extends Controller
             $accessCredential = AccessCredential::create([
                 'email' => $student->email,
                 'qrcode_url' => $request->attachmentUrl,
-                'student_id' => $student->id
+                'student_id' => $student->id,
+                'random_string' => Str::random(16),
             ]);
 
             $emailSent = false;
@@ -56,7 +58,7 @@ class QrCodeController extends Controller
                 $emailSent = true;
                 $emailMessage = 'QR code sent to email successfully';
             } catch (\Exception $e) {
-                $emailMessage = 'QR code created but email failed to send: ' . $e->getMessage();
+                $emailMessage = 'QR code created but email failed to send: '.$e->getMessage();
             }
 
             return response()->json([
@@ -69,15 +71,15 @@ class QrCodeController extends Controller
                     'class' => $student->class,
                     'qrcode_url' => $accessCredential->qrcode_url,
                     'email_sent' => $emailSent,
-                    'email_message' => $emailMessage
-                ]
+                    'email_message' => $emailMessage,
+                ],
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
                 'message' => 'Failed to create QR code credential',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -90,7 +92,7 @@ class QrCodeController extends Controller
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:access_credentials,id',
             'email' => 'sometimes|email|exists:users,email',
-            'qrcode_url' => 'sometimes|url'
+            'qrcode_url' => 'sometimes|url',
         ]);
 
         if ($validator->fails()) {
@@ -99,10 +101,10 @@ class QrCodeController extends Controller
 
         $accessCredential = AccessCredential::find($request->id);
 
-        if (!$accessCredential) {
+        if (! $accessCredential) {
             return response()->json([
                 'status' => 404,
-                'message' => 'Access credential not found'
+                'message' => 'Access credential not found',
             ], 404);
         }
 
@@ -117,21 +119,21 @@ class QrCodeController extends Controller
                 $updateData['qrcode_url'] = $request->qrcode_url;
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $accessCredential->update($updateData);
             }
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Access credential updated successfully',
-                'data' => $accessCredential->fresh()
+                'data' => $accessCredential->fresh(),
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
                 'message' => 'Failed to update access credential',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -142,7 +144,7 @@ class QrCodeController extends Controller
     public function show(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer|exists:users,id'
+            'user_id' => 'required|integer|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -153,16 +155,16 @@ class QrCodeController extends Controller
             ->with('user')
             ->first();
 
-        if (!$accessCredential) {
+        if (! $accessCredential) {
             return response()->json([
                 'status' => 404,
-                'message' => 'Access credential not found'
+                'message' => 'Access credential not found',
             ], 404);
         }
 
         return response()->json([
             'status' => 200,
-            'data' => $accessCredential
+            'data' => $accessCredential,
         ]);
     }
 
@@ -172,7 +174,7 @@ class QrCodeController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:access_credentials,id'
+            'id' => 'required|integer|exists:access_credentials,id',
         ]);
 
         if ($validator->fails()) {
@@ -181,10 +183,10 @@ class QrCodeController extends Controller
 
         $accessCredential = AccessCredential::find($request->id);
 
-        if (!$accessCredential) {
+        if (! $accessCredential) {
             return response()->json([
                 'status' => 404,
-                'message' => 'Access credential not found'
+                'message' => 'Access credential not found',
             ], 404);
         }
 
@@ -192,7 +194,7 @@ class QrCodeController extends Controller
 
         return response()->json([
             'status' => 200,
-            'message' => 'Access credential deleted successfully'
+            'message' => 'Access credential deleted successfully',
         ]);
     }
 }

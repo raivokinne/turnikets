@@ -2,228 +2,221 @@ import { Student } from "@/types/students";
 import { storage } from "@/utils/storage";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-
-interface ApiResponse<T> {
-  status: number;
-  message: string;
-  data: T;
-  errors?: string | Record<string, string[]>;
-}
+    import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 class StudentsApi {
-  getAuthHeaders(): Record<string, string> {
-    console.log("getAuthHeaders called, this:", this);
-    const token = storage.get("token");
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
+    getAuthHeaders(): Record<string, string> {
+        console.log("getAuthHeaders called, this:", this);
+        const token = storage.get("token");
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        };
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        return headers;
     }
 
-    return headers;
-  }
+    getMultipartHeaders(): Record<string, string> {
+        const token = storage.get("token");
+        const headers: Record<string, string> = {
+            Accept: "application/json",
+        };
 
-  getMultipartHeaders(): Record<string, string> {
-    const token = storage.get("token");
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+        return headers;
     }
 
-    return headers;
-  }
+    async create(studentData: Omit<Student, "id">): Promise<Student> {
+        console.log("create method called, this:", this);
+        console.log("studentData:", studentData);
 
-  async create(studentData: Omit<Student, "id">): Promise<Student> {
-    console.log("create method called, this:", this);
-    console.log("studentData:", studentData);
+        try {
+            const headers = this.getAuthHeaders();
+            console.log("headers:", headers);
 
-    try {
-      const headers = this.getAuthHeaders();
-      console.log("headers:", headers);
+            const response = await fetch(`${API_BASE_URL}students/store`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify(studentData),
+            });
 
-      const response = await fetch(`${API_BASE_URL}students/store`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(studentData),
-      });
+            if (!response.ok) {
+                const errorData = await response
+                    .json()
+                    .catch(() => ({
+                        status: response.status,
+                        message: "Unknown error",
+                        data: null,
+                    }));
+                throw new Error(errorData.message || "Failed to create student");
+            }
 
-      if (!response.ok) {
-        const errorData: ApiResponse<never> = await response
-          .json()
-          .catch(() => ({
-            status: response.status,
-            message: "Unknown error",
-            data: null,
-          }));
-        throw new Error(errorData.message || "Failed to create student");
-      }
-
-      const result: ApiResponse<Student> = await response.json();
-      return result.data;
-    } catch (error) {
-      console.error("Error in create method:", error);
-      throw error;
-    }
-  }
-
-  async getAll(): Promise<Student[]> {
-    const response = await fetch(`${API_BASE_URL}students`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch students");
+            const result = await response.json();
+            return result.data;
+        } catch (error) {
+            console.error("Error in create method:", error);
+            throw error;
+        }
     }
 
-    const result: ApiResponse<Student[]> = await response.json();
-    return result.data;
-  }
+    async getAll(): Promise<Student[]> {
+        const response = await fetch(`${API_BASE_URL}students`, {
+            method: "GET",
+            headers: this.getAuthHeaders(),
+        });
 
-  async getById(id: string | number): Promise<Student> {
-    const response = await fetch(`${API_BASE_URL}students/${id}/show`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
+        if (!response.ok) {
+            throw new Error("Failed to fetch students");
+        }
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch student");
+        const result = await response.json();
+        return result.data;
     }
 
-    const result: ApiResponse<Student> = await response.json();
-    return result.data;
-  }
+    async getById(id: string | number): Promise<Student> {
+        const response = await fetch(`${API_BASE_URL}students/${id}/show`, {
+            method: "GET",
+            headers: this.getAuthHeaders(),
+        });
 
-  async update(
-    id: string | number,
-    studentData: Partial<Student>,
-  ): Promise<Student> {
-    const response = await fetch(`${API_BASE_URL}students/${id}/update`, {
-      method: "PUT",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(studentData),
-    });
+        if (!response.ok) {
+            throw new Error("Failed to fetch student");
+        }
 
-    if (!response.ok) {
-      const errorData: ApiResponse<never> = await response.json().catch(() => ({
-        status: response.status,
-        message: "Unknown error",
-        data: null,
-      }));
-      throw new Error(errorData.message || "Failed to update student");
+        const result = await response.json();
+        return result.data;
     }
 
-    const result: ApiResponse<Student> = await response.json();
-    return result.data;
-  }
+    async update(
+        id: string | number,
+        studentData: Partial<Student>,
+    ): Promise<Student> {
+        const response = await fetch(`${API_BASE_URL}students/${id}/update`, {
+            method: "PUT",
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(studentData),
+        });
 
-  async delete(id: string | number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}students/${id}/destroy`, {
-      method: "DELETE",
-      headers: this.getAuthHeaders(),
-    });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({
+                status: response.status,
+                message: "Unknown error",
+                data: null,
+            }));
+            throw new Error(errorData.message || "Failed to update student");
+        }
 
-    if (!response.ok) {
-      throw new Error("Failed to delete student");
-    }
-  }
-
-  async createWithQrCode(userData: {
-    name: string;
-    email: string;
-    class: string;
-  }): Promise<{
-    user_id: number;
-    name: string;
-    email: string;
-    class: string;
-    qrcode_url: string;
-    email_sent: boolean;
-    email_message: string;
-  }> {
-    const response = await fetch(`${API_BASE_URL}create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
-
-    if (!response.ok) {
-      const errorData: ApiResponse<never> = await response.json().catch(() => ({
-        status: response.status,
-        message: "Unknown error",
-        data: null,
-      }));
-      throw new Error(errorData.message || "Failed to create user");
+        const result = await response.json();
+        return result.data;
     }
 
-    const result: ApiResponse<never> = await response.json();
-    return result.data;
-  }
+    async delete(id: string | number): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}students/${id}/destroy`, {
+            method: "DELETE",
+            headers: this.getAuthHeaders(),
+        });
 
-  async updateProfile(profileData: { email: string; avatar: File }): Promise<{
-    avatar_path: string;
-    avatar_url: string;
-  }> {
-    const formData = new FormData();
-    formData.append("email", profileData.email);
-    formData.append("avatar", profileData.avatar);
-
-    const response = await fetch(`${API_BASE_URL}/v1/auth/profile/update`, {
-      method: "POST",
-      headers: this.getMultipartHeaders(),
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData: ApiResponse<never> = await response.json().catch(() => ({
-        status: response.status,
-        message: "Unknown error",
-        data: null,
-      }));
-      throw new Error(errorData.message || "Failed to update profile");
+        if (!response.ok) {
+            throw new Error("Failed to delete student");
+        }
     }
 
-    const result: ApiResponse<never> = await response.json();
-    return result.data;
-  }
+    async createWithQrCode(userData: {
+        name: string;
+        email: string;
+        class: string;
+    }): Promise<{
+        user_id: number;
+        name: string;
+        email: string;
+        class: string;
+        qrcode_url: string;
+        email_sent: boolean;
+        email_message: string;
+    }> {
+        const response = await fetch(`${API_BASE_URL}create`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify(userData),
+        });
 
-  async sendQrCodeEmail(emailData: {
-    to: string;
-    name: string;
-    attachmentUrl: string;
-    class: string;
-  }): Promise<{
-    recipient: string;
-    qrcode_url: string;
-  }> {
-    const response = await fetch(`${API_BASE_URL}/v1/auth/email/send`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(emailData),
-    });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({
+                status: response.status,
+                message: "Unknown error",
+                data: null,
+            }));
+            throw new Error(errorData.message || "Failed to create user");
+        }
 
-    if (!response.ok) {
-      const errorData: ApiResponse<never> = await response.json().catch(() => ({
-        status: response.status,
-        message: "Unknown error",
-        data: null,
-      }));
-      throw new Error(errorData.message || "Failed to send email");
+        const result = await response.json();
+        return result.data;
     }
 
-    const result: ApiResponse<never> = await response.json();
-    return result.data;
-  }
+    async updateProfile(profileData: { email: string; avatar: File }): Promise<{
+        avatar_path: string;
+        avatar_url: string;
+    }> {
+        const formData = new FormData();
+        formData.append("email", profileData.email);
+        formData.append("avatar", profileData.avatar);
+
+        const response = await fetch(`${API_BASE_URL}/v1/auth/profile/update`, {
+            method: "POST",
+            headers: this.getMultipartHeaders(),
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({
+                status: response.status,
+                message: "Unknown error",
+                data: null,
+            }));
+            throw new Error(errorData.message || "Failed to update profile");
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
+
+    async sendQrCodeEmail(emailData: {
+        to: string;
+        name: string;
+        attachmentUrl: string;
+        class: string;
+    }): Promise<{
+        recipient: string;
+        qrcode_url: string;
+    }> {
+        const response = await fetch(`${API_BASE_URL}/v1/auth/email/send`, {
+            method: "POST",
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(emailData),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({
+                status: response.status,
+                message: "Unknown error",
+                data: null,
+            }));
+            throw new Error(errorData.message || "Failed to send email");
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
 }
 
 export const studentsApi = new StudentsApi();
