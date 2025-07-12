@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class QrCodeController extends Controller
 {
@@ -22,6 +21,7 @@ class QrCodeController extends Controller
         $validator = Validator::make($request->all(), [
             'to' => 'required|email|exists:students,email',
             'attachmentUrl' => 'required|url',
+            'data' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -99,7 +99,7 @@ class QrCodeController extends Controller
             return $this->incorrectPayload($validator->errors());
         }
 
-        $accessCredential = AccessCredential::find($request->id);
+        $accessCredential = AccessCredential::query()->find($request->id);
 
         if (! $accessCredential) {
             return response()->json([

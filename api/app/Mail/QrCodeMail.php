@@ -5,18 +5,20 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Attachment;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Http;
 
 class QrCodeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     private string $name;
+
     private string $email;
+
     private string $attachmentUrl;
 
     public function __construct(string $name, string $email, string $attachmentUrl)
@@ -44,6 +46,7 @@ class QrCodeMail extends Mailable
             ]
         );
     }
+
     /**
      * @return array<int,Attachment>
      */
@@ -57,4 +60,3 @@ class QrCodeMail extends Mailable
         ];
     }
 }
-

@@ -3,6 +3,7 @@ import { api } from "@/utils/api";
 interface SendEmailParams {
     to: string;
     attachmentUrl?: string;
+    data?: string;
     id: number;
     name: string;
     class: string;
@@ -74,6 +75,7 @@ export const QRService = {
             await QRService.sendEmail({
                 to: studentEmail,
                 attachmentUrl: qrUrl,
+                data: qrData,
                 name: studentName,
                 id: studentId,
                 class: studentClass,
