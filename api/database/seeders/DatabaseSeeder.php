@@ -34,5 +34,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('student123'),
             'role' => 'student'
         ]);
+
+        
     }
 }
