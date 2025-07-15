@@ -57,7 +57,7 @@ class StudentController extends Controller
                 'status' => $request->status,
                 'name' => $request->name,
                 'email' => $request->email,
-                'time' => now()->format('H:i:s'),
+                'uuid' => Str::uuid()->toString(),
             ]);
 
             $this->sendEmail($student);

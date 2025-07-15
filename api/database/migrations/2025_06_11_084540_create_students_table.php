@@ -15,7 +15,8 @@ return new class extends Migration {
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->string('class')->nullable();
-            $table->time('time');
+            $table->string('uuid');
+            //$table->time('time'); // Nezinu kam time domats
             $table->timestamps();
         });
     }
