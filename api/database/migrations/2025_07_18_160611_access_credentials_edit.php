@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('access_credentials', function (Blueprint $table) {
-            $table->dropColumn('random_string');
-            $table->string('uuid')->unique();
+            $table->uuid('uuid')->unique()->after('id');
         });
     }
 
@@ -22,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::table('access_credentials', function (Blueprint $table) {
+            $table->dropColumn('uuid');
+        });
     }
 };
