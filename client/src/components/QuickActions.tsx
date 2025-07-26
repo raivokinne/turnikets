@@ -3,7 +3,7 @@ import { User, QrCode } from 'lucide-react';
 import AddStudentForm from './AddStudentForm';
 import SendQRCodeModal from './SendQRCodeModal';
 import { Student } from '@/types/students';
-import { api } from '@/utils/api';
+import { studentsApi } from "@/api/students";
 
 const QuickActions: React.FC = () => {
   const [showAddStudent, setShowAddStudent] = useState(false);
@@ -13,14 +13,9 @@ const QuickActions: React.FC = () => {
   useEffect(() => {
     async function fetchData() {
       try {
-        const resp = await api.get('/logs');
-        const studentLogs = resp.data?.data?.data ?? [];
+        const resp = await studentsApi.getAll();
 
-        const students = studentLogs
-          .map((log: any) => log.student)
-          .filter(Boolean);
-
-        setStudents(students);
+        setStudents(resp);
       } catch (error) {
         console.error('Failed to fetch attendance data:', error);
         setStudents([]);

@@ -20,6 +20,8 @@ class StudentFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'class' => $this->faker->randomElement(['A', 'B', 'C', 'D', 'E', 'F']),
+            'status' => $this->faker->randomElement(['klātbutne', 'prombutnē']),
+            'time' => now(),
             'uuid' => $this->faker->uuid(),
         ];
     }
