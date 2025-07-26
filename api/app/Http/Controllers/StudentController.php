@@ -20,7 +20,7 @@ class StudentController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $students = Student::with('user')->get();
+            $students = Student::all();
 
             return response()->json([
                 'status' => 200,
@@ -42,7 +42,7 @@ class StudentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'class' => 'required|string|max:255',
-            'status' => 'required|in:klātbutne,prombutnē,gaida',
+            'status' => 'required|in:klātbutne,prombutnē,neviens',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
         ]);
@@ -57,6 +57,7 @@ class StudentController extends Controller
                 'status' => $request->status,
                 'name' => $request->name,
                 'email' => $request->email,
+                'time' => now(),
                 'uuid' => Str::uuid()->toString(),
             ]);
 

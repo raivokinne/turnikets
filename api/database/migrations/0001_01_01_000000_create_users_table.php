@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('class')->nullable();
             $table->string('avatar')->nullable();
             $table->string('password')->nullable();
+            $table->string('uuid');
             $table->rememberToken();
             $table->timestamps();
         });

@@ -14,6 +14,7 @@ class Student extends Model
         'class',
         'uuid',
         'name',
+        'time',
         'email'
     ];
 

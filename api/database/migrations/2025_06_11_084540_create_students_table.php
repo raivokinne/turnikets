@@ -11,12 +11,12 @@ return new class extends Migration {
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->enum('status', ['klātbutne', 'prombutnē'])->default('klātbutne');
+            $table->enum('status', ['klātbutne', 'prombutnē', 'neviens'])->default('klātbutne');
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->string('class')->nullable();
-            $table->string('uuid');
-            //$table->time('time'); // Nezinu kam time domats
+            $table->string('uuid'); // uuid x64
+            $table->time('time'); // Timestamp of the most recent action?
             $table->timestamps();
         });
     }
