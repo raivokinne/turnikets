@@ -12,8 +12,9 @@ class Student extends Model
     protected $fillable = [
         'status',
         'class',
-        'time',
+        'uuid',
         'name',
+        'time',
         'email'
     ];
 

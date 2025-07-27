@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('email');
             $table->text('qrcode_url');
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
-            $table->string('random_string');
+            $table->string('uuid')->unique();
             $table->timestamps();
         });
     }

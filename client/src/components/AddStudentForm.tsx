@@ -222,7 +222,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = (
                             >
                                 <option value="klātbutne">Klātbutne</option>
                                 <option value="prombutnē">Prombutnē</option>
-                                <option value="gaida">Gaida</option>
+                                <option value="neviens">Gaida</option>
                             </select>
                             {form.formState.errors.status && (
                                 <p className="text-red-500 text-sm mt-1">
