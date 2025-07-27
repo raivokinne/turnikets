@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccessCredential;
+use App\Models\Student;
+use App\Models\Log;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -12,9 +14,31 @@ class GateController extends Controller
     public function RequestCardEvent(Request $request): void
     {
         $card = $request->all()['Card'];
-        $access = AccessCredential::query()->where('uuid', $card)->first();
-        if ($access) {
-            $this->OpenGate($request->all()['IP']);
+        $ip = $request->all()['IP'];
+        $reader = $request->all()['Reader'];
+        $aC = AccessCredential::query()->where('uuid', $card)->first();
+        $student = Student::query()->where('id', $aC->student_id)->first();
+
+        if ($student) {
+            $lastLog = Log::query()->where('student_id', $student->id)->orderBy('time', 'desc')->first();
+            if ($reader == 1 && $lastLog->action == 'entry') {
+                Log::create([
+                    'time' => now(),
+                    'student_id' => $student->id,
+                    'action' => 'exit',
+                    'description' => $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'),
+                ]);
+                $this->OpenGate($ip, $reader);
+            }elseif ($reader == 0 && $lastLog->action == 'exit') {
+                Log::create([
+                    'time' => now(),
+                    'student_id' => $student->id,
+                    'action' => 'entry',
+                    'description' => $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'),
+                ]);
+                $this->OpenGate($ip, $reader);
+            }
+
         }
     }
 
