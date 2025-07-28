@@ -90,6 +90,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = (
         );
     }
 
+    // @ts-ignore
+    // @ts-ignore
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -220,8 +222,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = (
                                 {...form.register("status")}
                                 className="w-full h-12 px-4 border border-gray-300 rounded-lg bg-white"
                             >
-                                <option value="klātbutne">Klātbutne</option>
-                                <option value="prombutnē">Prombutnē</option>
+                                <option value="klātbūtnē">Klātbūtnē</option>
+                                <option value="prombūtnē">Prombūtnē</option>
                                 <option value="neviens">Gaida</option>
                             </select>
                             {form.formState.errors.status && (

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Log;
 use App\Models\Student;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -53,6 +54,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Student::factory(7)->create();
+
+        Log::factory(10)->create();
 
     }
 }
