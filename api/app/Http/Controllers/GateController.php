@@ -28,6 +28,8 @@ class GateController extends Controller
                     'action' => 'exit',
                     'description' => $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'),
                 ]);
+                $student->status = "prombūtnē";
+                $student->save();
                 $this->OpenGate($ip, $reader);
             }elseif ($reader == 0 && $lastLog->action == 'exit') {
                 Log::create([
@@ -36,6 +38,8 @@ class GateController extends Controller
                     'action' => 'entry',
                     'description' => $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'),
                 ]);
+                $student->status = "klātbūtnē";
+                $student->save();
                 $this->OpenGate($ip, $reader);
             }
 

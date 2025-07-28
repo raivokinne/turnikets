@@ -4,7 +4,8 @@ import StudentList from './StudentList';
 import StudentManagement from './StudentManagement';
 import QuickActions from './QuickActions';
 import { Student } from '@/types/students';
-import { api } from '@/utils/api';
+import { LogEntry, LogStudentInfo } from '@/types/logs';
+import { logsApi } from '@/api/logs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const SimpleStudentDashboard: React.FC = () => {
@@ -12,20 +13,32 @@ const SimpleStudentDashboard: React.FC = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [attendanceData, setAttendanceData] = useState<Student[]>([]);
+    const [logStudentData, setLogStudentData] = useState<LogStudentInfo[]>([]);
     const [activeTab, setActiveTab] = useState('attendance');
 
     useEffect(() => {
         async function fetchData() {
             try {
-                const resp = await api.get('/logs');
-                const studentLogs = resp.data?.data?.data;
-                const students = studentLogs
-                    .map((log: any) => log.student)
-                    .filter(Boolean);
+                const logs = await logsApi.getLogs();
+
+                // Extract students and create log-student pairs
+                const students = logs
+                    .map((log: LogEntry) => log.student)
+                    .filter(Boolean) as Student[];
+
+                const logStudentPairs = logs
+                    .filter((log: LogEntry) => log.student)
+                    .map((log: LogEntry) => ({
+                        log,
+                        student: log.student!
+                    }));
+
                 setAttendanceData(students);
+                setLogStudentData(logStudentPairs);
             } catch (error) {
                 console.error('Failed to fetch attendance data:', error);
                 setAttendanceData([]);
+                setLogStudentData([]);
             }
         }
         fetchData();
@@ -34,7 +47,7 @@ const SimpleStudentDashboard: React.FC = () => {
     const classes = Array.from(new Set(attendanceData.map(s => s.class ?? ''))).filter(Boolean).sort();
     const statuses = Array.from(new Set(attendanceData.map(s => s.status ?? ''))).filter(Boolean).sort();
 
-    const filteredStudents = attendanceData.filter(student => {
+    const filteredLogStudents = logStudentData.filter(({ student }) => {
         const name = student.name ?? '';
         const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -71,7 +84,7 @@ const SimpleStudentDashboard: React.FC = () => {
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
                         <div className="lg:col-span-3">
                             <TabsContent value="attendance" className="mt-0">
-                                <StudentList students={filteredStudents} />
+                                <StudentList logStudentData={filteredLogStudents} />
                             </TabsContent>
 
                             <TabsContent value="students" className="mt-0">

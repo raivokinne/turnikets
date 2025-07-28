@@ -11,7 +11,7 @@ return new class extends Migration {
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->enum('status', ['klātbutne', 'prombutnē', 'neviens'])->default('klātbutne');
+            $table->enum('status', ['klātbūtnē', 'prombūtnē', 'neviens'])->default('klātbutne');
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->string('class')->nullable();
