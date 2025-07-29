@@ -1,8 +1,10 @@
 import { api } from "@/utils/api";
+import { v4 as uuidv4 } from 'uuid';
 
 interface SendEmailParams {
     to: string;
     attachmentUrl?: string;
+    data?: string;
     id: number;
     name: string;
     class: string;
@@ -21,7 +23,7 @@ export const QRService = {
         size: string = "200x200",
         margin: number = 30,
     ): string => {
-        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}&data=${encodeURIComponent(data)}&margin=${margin}`;
+        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}&data=${data}&margin=${margin}`;
     },
 
     /**
@@ -36,7 +38,7 @@ export const QRService = {
         studentName: string,
         studentClass: string,
     ): string => {
-        return `${studentName}-${studentClass}-${studentId}-${Math.random()}-${Date.now()}`;
+        return uuidv4();
     },
 
     sendEmail: async (params: SendEmailParams): Promise<boolean> => {
@@ -74,6 +76,7 @@ export const QRService = {
             await QRService.sendEmail({
                 to: studentEmail,
                 attachmentUrl: qrUrl,
+                data: qrData,
                 name: studentName,
                 id: studentId,
                 class: studentClass,

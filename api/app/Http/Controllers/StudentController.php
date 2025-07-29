@@ -61,6 +61,8 @@ class StudentController extends Controller
                 'uuid' => Str::uuid()->toString(),
             ]);
 
+            $this->sendEmail($student);
+
             Log::create([
                 'student_id' => $student->id,
                 'action' => 'student_created',
@@ -374,7 +376,7 @@ class StudentController extends Controller
         }
     }
 
-    public function massUpdate(Request $request)
+    public function massUpdate(Request $request): JsonResponse
     {
         try {
             foreach ($request->data as $st) {

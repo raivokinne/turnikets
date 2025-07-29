@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccessCredential;
-use App\Models\Student;
 use App\Models\Log;
-use Illuminate\Http\Client\Response;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -48,21 +47,20 @@ class GateController extends Controller
 
     public function RequestStatus(Request $request): void
     {
-        foreach ($request->all() as $key => $value) { //debug un ari nekam citam drosvien netiks izmantots
+        foreach ($request->all() as $key => $value) { // debug un ari nekam citam drosvien netiks izmantots
             error_log($key.': '.$value);
         }
     }
 
-    private function OpenGate(string $gateIp,int $reader): void
+    private function OpenGate(string $gateIp, int $reader): void
     {
-        Http::get($gateIp, [ //env var iet kast ip in gudrak tik un ta
-            'open' => $reader, //lai veras uz pareizo virzienu abiem jabut vienadiem
+        Http::get($gateIp, [ // env var iet kast ip in gudrak tik un ta
+            'open' => $reader, // lai veras uz pareizo virzienu abiem jabut vienadiem
             'door' => $reader,
         ]);
     }
 
-
-    private function OpenBothGate(string $gateIp1,string $gateIp2): void
+    private function OpenBothGate(string $gateIp1, string $gateIp2): void
     {
         Http::get($gateIp1, [
             'open' => 1,
@@ -73,5 +71,4 @@ class GateController extends Controller
             'door' => 0,
         ]);
     }
-
 }
