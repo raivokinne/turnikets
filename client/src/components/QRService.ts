@@ -38,7 +38,7 @@ export const QRService = {
         studentName: string,
         studentClass: string,
     ): string => {
-        return uuidv4();;
+        return uuidv4();
     },
 
     sendEmail: async (params: SendEmailParams): Promise<boolean> => {
