@@ -256,4 +256,16 @@ class LogController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Mark as deleated whats older then 2 weeks
+     */
+    public function clearOldLogs()
+    {
+            $oldLogs = Log::where('time', '<', now()->subWeeks(2));
+            $oldLogs->each(function($log) {
+                $log->hidden = true;
+                $log->save();
+            });
+    }
 }
