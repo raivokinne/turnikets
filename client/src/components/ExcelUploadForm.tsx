@@ -25,7 +25,8 @@ const excelUploadSchema = z.object({
                     file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
                     file.type === "application/vnd.ms-excel" ||
                     file.name.endsWith('.xlsx') ||
-                    file.name.endsWith('.xls')
+                    file.name.endsWith('.xls') ||
+                    file.name.endsWith('.xlsm')
                 );
             },
             "Lūdzu izvēlieties derīgu Excel failu (.xlsx vai .xls)"
@@ -159,7 +160,7 @@ const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({
                             >
                                 <input
                                     type="file"
-                                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                                    accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                                     disabled={uploadExcelMutation.isPending}
                                     {...form.register("file")}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
