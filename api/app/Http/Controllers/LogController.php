@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class LogController extends Controller
@@ -60,7 +61,11 @@ class LogController extends Controller
             }
 
             $perPage = $request->get('per_page', 50);
-            $logs = $query->orderBy('time', 'desc')->paginate($perPage);
+            if (Auth::user()->role === 'admin') {
+                $logs = $query->orderBy('time', 'desc')->paginate($perPage);
+            } else {
+                $logs = $query->where('action', ['entry', 'exit'])->orderBy('time', 'desc')->paginate($perPage);
+            }
 
             return response()->json([
                 'status' => 200,
