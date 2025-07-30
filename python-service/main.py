@@ -149,7 +149,7 @@ def upload_excel():
                 return
 
             try:
-                backend_url = 'http://localhost:8000/api/mass-update'
+                backend_url = 'http://127.0.0.1:8000/api/mass-update'
                 payload = {
                     'data': result['data'],
                     'total_records': result['total_records']

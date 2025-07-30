@@ -29,3 +29,39 @@ export interface LogStudentInfo {
     log: LogEntry;
     student: Student;
 }
+
+interface FilterState {
+  startDate: string;
+  endDate: string;
+  studentId: string;
+  action: string;
+  class: string;
+}
+
+interface AttendanceData {
+  date: string;
+  entries: number;
+  exits: number;
+}
+
+interface StatData {
+  name: string;
+  value: number;
+}
+
+interface ReportData {
+  attendance: AttendanceData[];
+  actionStats: StatData[];
+  classStats: StatData[];
+  timeline: LogEntry[];
+}
+
+interface StudentActivity {
+  [studentName: string]: number;
+}
+
+interface HourlyActivity {
+  [hour: number]: number;
+}
+
+type TabType = 'overview' | 'attendance' | 'analytics' | 'timeline';
