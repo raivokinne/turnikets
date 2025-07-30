@@ -20,7 +20,8 @@ class LogController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'student_id' => 'sometimes|integer|exists:students,id',
-            'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created',
+            'user_id' => 'sometimes|integer|exists:users,id',
+            'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created,student_created,student_updated,student_deleted,mass_student_upload,email_send_failed',
             'date' => 'sometimes|date_format:Y-m-d',
             'start_date' => 'sometimes|date_format:Y-m-d',
             'end_date' => 'sometimes|date_format:Y-m-d',
@@ -64,7 +65,7 @@ class LogController extends Controller
             if (Auth::user()->role === 'admin') {
                 $logs = $query->orderBy('time', 'desc')->paginate($perPage);
             } else {
-                $logs = $query->where('action', ['entry', 'exit'])->orderBy('time', 'desc')->paginate($perPage);
+                $logs = $query->whereIn('action', ['entry', 'exit'])->orderBy('time', 'desc')->paginate($perPage);
             }
 
             return response()->json([
