@@ -3,7 +3,8 @@ import { Student } from './students';
 export interface LogEntry {
     id: number;
     time: string;
-    student_id: number;
+    student_id: number|null;
+    user_id: number|null;
     action?: string;
     description?: string;
     created_at: string;
