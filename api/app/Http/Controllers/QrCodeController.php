@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Mail\QrCodeMail;
 use App\Models\AccessCredential;
 use App\Models\Student;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;

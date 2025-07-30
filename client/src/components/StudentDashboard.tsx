@@ -21,7 +21,6 @@ const SimpleStudentDashboard: React.FC = () => {
             try {
                 const logs = await logsApi.getLogs();
 
-                // Extract students and create log-student pairs
                 const students = logs
                     .map((log: LogEntry) => log.student)
                     .filter(Boolean) as Student[];
