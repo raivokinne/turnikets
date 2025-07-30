@@ -5,6 +5,7 @@ use App\Http\Controllers\GateController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance-summary', [LogController::class, 'getAttendanceSummary']);
         Route::get('user-timeline', [LogController::class, 'getUserTimeline']);
         Route::get('current-occupancy', [LogController::class, 'getCurrentOccupancy']);
+    });
+
+    Route::group(['prefix' => 'users'], function () {
+        Route::get('/', [UserController::class, 'index']);
+        Route::post('store', [UserController::class, 'store']);
+        Route::get('show', [UserController::class, 'show']);
+        Route::post('update', [UserController::class, 'update']);
+        Route::delete('destroy', [UserController::class, 'destroy']);
+        Route::get('by-role', [UserController::class, 'getUsersByRole']);
+        Route::get('stats', [UserController::class, 'getUserStats']);
     });
 
     Route::get('user', function (Request $request) {

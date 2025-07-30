@@ -21,7 +21,7 @@ class LogController extends Controller
         $validator = Validator::make($request->all(), [
             'student_id' => 'sometimes|integer|exists:students,id',
             'user_id' => 'sometimes|integer|exists:users,id',
-            'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created,student_created,student_updated,student_deleted,mass_student_upload,email_send_failed',
+            'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created,user_updated,user_deleted,student_created,student_updated,student_deleted,mass_student_upload,email_send_failed',
             'date' => 'sometimes|date_format:Y-m-d',
             'start_date' => 'sometimes|date_format:Y-m-d',
             'end_date' => 'sometimes|date_format:Y-m-d',
@@ -34,10 +34,14 @@ class LogController extends Controller
         }
 
         try {
-            $query = Log::with('student');
+            $query = Log::with(['student', 'user']);
 
             if ($request->has('student_id')) {
                 $query->where('student_id', $request->student_id);
+            }
+
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
             }
 
             if ($request->has('action')) {
@@ -61,12 +65,42 @@ class LogController extends Controller
                 });
             }
 
+            $query->where('hidden', '!=', true);
+
             $perPage = $request->get('per_page', 50);
             if (Auth::user()->role === 'admin') {
                 $logs = $query->orderBy('time', 'desc')->paginate($perPage);
             } else {
                 $logs = $query->whereIn('action', ['entry', 'exit'])->orderBy('time', 'desc')->paginate($perPage);
             }
+
+            $logs->getCollection()->transform(function ($log) {
+                $details = null;
+                if ($log->details) {
+                    try {
+                        $details = json_decode($log->details, true);
+                    } catch (\Exception $e) {
+                        $details = null;
+                    }
+                }
+
+                $log->performed_by_user = null;
+                if ($log->user) {
+                    $log->performed_by_user = [
+                        'id' => $log->user->id,
+                        'name' => $log->user->name,
+                        'email' => $log->user->email,
+                        'role' => $log->user->role
+                    ];
+                } elseif ($details && isset($details['performed_by'])) {
+                    $log->performed_by_user = [
+                        'name' => $details['performed_by']
+                    ];
+                }
+
+                $log->parsed_details = $details;
+                return $log;
+            });
 
             return response()->json([
                 'status' => 200,
@@ -101,10 +135,11 @@ class LogController extends Controller
         try {
             $query = Log::with('student')
                 ->whereDate('time', $date)
-                ->whereIn('action', ['entry', 'exit']);
+                ->whereIn('action', ['entry', 'exit'])
+                ->where('hidden', '!=', true);
 
             if ($request->has('class')) {
-                $query->whereHas('user', function($q) use ($request) {
+                $query->whereHas('student', function($q) use ($request) {
                     $q->where('class', $request->class);
                 });
             }
@@ -113,9 +148,9 @@ class LogController extends Controller
 
             $attendance = [];
             foreach ($logs as $log) {
-                $userId = $log->student_id;
-                if (!isset($attendance[$userId])) {
-                    $attendance[$userId] = [
+                $studentId = $log->student_id;
+                if (!isset($attendance[$studentId])) {
+                    $attendance[$studentId] = [
                         'student' => $log->student,
                         'entries' => [],
                         'exits' => [],
@@ -125,10 +160,10 @@ class LogController extends Controller
                 }
 
                 if ($log->action === 'entry') {
-                    $attendance[$userId]['entries'][] = $log->time;
-                    $attendance[$userId]['status'] = 'present';
+                    $attendance[$studentId]['entries'][] = $log->time;
+                    $attendance[$studentId]['status'] = 'present';
                 } else {
-                    $attendance[$userId]['exits'][] = $log->time;
+                    $attendance[$studentId]['exits'][] = $log->time;
                 }
             }
 
@@ -179,7 +214,7 @@ class LogController extends Controller
     public function getUserTimeline(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'student_id' => 'required|integer|exists:users,id',
+            'student_id' => 'required|integer|exists:students,id',
             'date' => 'sometimes|date_format:Y-m-d'
         ]);
 
@@ -191,17 +226,18 @@ class LogController extends Controller
 
         try {
             $logs = Log::with('student')
-                ->where('student_id', $request->user_id)
+                ->where('student_id', $request->student_id)
                 ->whereDate('time', $date)
+                ->where('hidden', '!=', true)
                 ->orderBy('time', 'asc')
                 ->get();
 
-            $user = User::find($request->user_id);
+            $student = Student::find($request->student_id);
 
             return response()->json([
                 'status' => 200,
                 'data' => [
-                    'user' => $user,
+                    'student' => $student,
                     'date' => $date,
                     'timeline' => $logs
                 ]
@@ -222,16 +258,16 @@ class LogController extends Controller
     public function getCurrentOccupancy(): JsonResponse
     {
         try {
-            $presentUsers = Student::where('status', 'klātbutne')
-                ->where('role', 'student')
+            $presentStudents = Student::where('status', 'klātbutne')
                 ->with(['logs' => function($query) {
                     $query->whereDate('time', now())
                         ->where('action', 'entry')
+                        ->where('hidden', '!=', true)
                         ->latest();
                 }])
                 ->get();
 
-            $occupancyByClass = $presentUsers->groupBy('class')->map(function($students, $class) {
+            $occupancyByClass = $presentStudents->groupBy('class')->map(function($students, $class) {
                 return [
                     'class' => $class,
                     'count' => $students->count(),
@@ -248,7 +284,7 @@ class LogController extends Controller
             return response()->json([
                 'status' => 200,
                 'data' => [
-                    'total_present' => $presentUsers->count(),
+                    'total_present' => $presentStudents->count(),
                     'by_class' => $occupancyByClass->values(),
                     'last_updated' => now()
                 ]
@@ -264,14 +300,39 @@ class LogController extends Controller
     }
 
     /**
-     * Mark as deleated whats older then 2 weeks
+     * Mark as deleted what's older than 2 weeks
      */
-    public function clearOldLogs()
+    public function clearOldLogs(): JsonResponse
     {
+        try {
             $oldLogs = Log::where('time', '<', now()->subWeeks(2));
-            $oldLogs->each(function($log) {
-                $log->hidden = true;
-                $log->save();
-            });
+            $count = $oldLogs->count();
+
+            $oldLogs->update(['hidden' => true]);
+
+            return response()->json([
+                'status' => 200,
+                'message' => "Successfully marked {$count} old logs as hidden"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to clear old logs',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper method for incorrect payload response
+     */
+    public function incorrectPayload($errors): JsonResponse
+    {
+        return response()->json([
+            'status' => 422,
+            'message' => 'Validation failed',
+            'errors' => $errors
+        ], 422);
     }
 }

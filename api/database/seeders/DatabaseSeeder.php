@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
 
         Student::factory(7)->create();
 
-        Log::factory(20)->create();
+        Log::factory(30)->create();
 
     }
 }
