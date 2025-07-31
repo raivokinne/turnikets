@@ -379,15 +379,6 @@ class StudentController extends Controller
     public function massUpdate(Request $request): JsonResponse
     {
         try {
-            // Log the raw request
-            \Illuminate\Support\Facades\Log::info('Raw request data', [
-                'all_data' => $request->all(),
-                'has_data_key' => $request->has('data'),
-                'data_type' => gettype($request->input('data')),
-                'data_count' => is_array($request->input('data')) ? count($request->input('data')) : 'not array',
-            ]);
-
-            // Check if data key exists
             if (! $request->has('data') || ! is_array($request->input('data'))) {
                 return response()->json([
                     'status' => 400,
@@ -398,129 +389,28 @@ class StudentController extends Controller
 
             $data = $request->input('data');
 
-            // Log first few records to see structure
-            \Illuminate\Support\Facades\Log::info('Sample data structure', [
-                'first_record' => isset($data[0]) ? $data[0] : 'no records',
-                'total_records' => count($data),
-            ]);
-
             $createdStudents = [];
-            $errors = [];
 
             foreach ($data as $index => $studentData) {
-                try {
-                    \Illuminate\Support\Facades\Log::info("Processing student at index {$index}", [
-                        'student_data' => $studentData,
-                        'name_exists' => isset($studentData['name']),
-                        'email_exists' => isset($studentData['email']),
-                        'name_value' => $studentData['name'] ?? 'MISSING',
-                        'email_value' => $studentData['email'] ?? 'MISSING',
-                    ]);
+                $insertData = [
+                    'status' => 'prombūtnē',
+                    'name' => trim($studentData['name']),
+                    'email' => trim($studentData['email']),
+                    'uuid' => Str::uuid()->toString(),
+                    'time' => now(),
+                ];
 
-                    if (! isset($studentData['name']) || ! isset($studentData['email'])) {
-                        $error = 'Missing required fields - name: '.(isset($studentData['name']) ? 'present' : 'missing').
-                                ', email: '.(isset($studentData['email']) ? 'present' : 'missing');
-                        \Illuminate\Support\Facades\Log::warning($error, ['data' => $studentData]);
-                        $errors[] = $error;
+                $student = Student::query()->create($insertData);
 
-                        continue;
-                    }
-
-                    if (empty(trim($studentData['name'])) || empty(trim($studentData['email']))) {
-                        $error = "Empty required fields - name: '{$studentData['name']}', email: '{$studentData['email']}'";
-                        \Illuminate\Support\Facades\Log::warning($error);
-                        $errors[] = $error;
-
-                        continue;
-                    }
-
-                    if (! filter_var($studentData['email'], FILTER_VALIDATE_EMAIL)) {
-                        $error = "Invalid email format: '{$studentData['email']}'";
-                        \Illuminate\Support\Facades\Log::warning($error);
-                        $errors[] = $error;
-
-                        continue;
-                    }
-
-                    $existingStudent = Student::where('email', $studentData['email'])->first();
-                    if ($existingStudent) {
-                        $warning = "Student with email {$studentData['email']} already exists (ID: {$existingStudent->id})";
-                        \Illuminate\Support\Facades\Log::warning($warning);
-                        $errors[] = $warning;
-
-                        continue;
-                    }
-
-                    $insertData = [
-                        'status' => 'prombūtnē',
-                        'name' => trim($studentData['name']),
-                        'email' => trim($studentData['email']),
-                        'uuid' => \Str::uuid()->toString(),
-                        'time' => now(),
-                    ];
-
-                    \Illuminate\Support\Facades\Log::info('About to create student with data', $insertData);
-
-                    $student = Student::create($insertData);
-
-                    if ($student && $student->id) {
-                        $createdStudents[] = $student;
-                        \Illuminate\Support\Facades\Log::info('Student created successfully', [
-                            'id' => $student->id,
-                            'name' => $student->name,
-                            'email' => $student->email,
-                        ]);
-                    } else {
-                        \Illuminate\Support\Facades\Log::error('Student creation returned null or invalid object', [
-                            'student_object' => $student,
-                            'insert_data' => $insertData,
-                        ]);
-                        $errors[] = "Failed to create student {$studentData['name']} - creation returned null";
-                    }
-
-                } catch (\Illuminate\Database\QueryException $e) {
-                    \Illuminate\Support\Facades\Log::error("Database error at index {$index}", [
-                        'student_data' => $studentData,
-                        'sql_error' => $e->getMessage(),
-                        'error_code' => $e->getCode(),
-                        'sql_state' => $e->errorInfo[0] ?? 'unknown',
-                        'driver_error_code' => $e->errorInfo[1] ?? 'unknown',
-                        'driver_error_message' => $e->errorInfo[2] ?? 'unknown',
-                    ]);
-                    $errors[] = "Database error for {$studentData['name']}: ".$e->getMessage();
-
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("General error at index {$index}", [
-                        'student_data' => $studentData,
-                        'error_message' => $e->getMessage(),
-                        'error_class' => get_class($e),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    $errors[] = "Error creating student {$studentData['name']}: ".$e->getMessage();
-                }
+                $createdStudents[] = $student;
             }
 
             return response()->json([
                 'status' => 200,
                 'message' => count($createdStudents).' students uploaded successfully',
-                'data' => $createdStudents,
-                'errors' => $errors,
-                'total_processed' => count($data),
-                'total_created' => count($createdStudents),
             ]);
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Mass update completely failed', [
-                'error' => $e->getMessage(),
-                'class' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-            ]);
-
             return response()->json([
                 'status' => 500,
                 'message' => 'Failed to upload students',
