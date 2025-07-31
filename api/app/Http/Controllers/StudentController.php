@@ -332,63 +332,19 @@ class StudentController extends Controller
 
             $data = $request->input('data');
             $createdStudents = [];
-            $errors = [];
 
             foreach ($data as $index => $studentData) {
-                try {
-                    if (! isset($studentData['name']) || ! isset($studentData['email'])) {
-                        $error = 'Missing required fields - name: '.(isset($studentData['name']) ? 'present' : 'missing').
-                            ', email: '.(isset($studentData['email']) ? 'present' : 'missing');
-                        $errors[] = $error;
-                        continue;
-                    }
+                $insertData = [
+                    'status' => 'prombūtnē',
+                    'name' => trim($studentData['name']),
+                    'email' => trim($studentData['email']),
+                    'uuid' => Str::uuid()->toString(),
+                    'time' => now(),
+                ];
 
-                    if (empty(trim($studentData['name'])) || empty(trim($studentData['email']))) {
-                        $error = "Empty required fields - name: '{$studentData['name']}', email: '{$studentData['email']}'";
-                        $errors[] = $error;
-                        continue;
-                    }
+                $student = Student::query()->create($insertData);
 
-                    if (! filter_var($studentData['email'], FILTER_VALIDATE_EMAIL)) {
-                        $error = "Invalid email format: '{$studentData['email']}'";
-                        $errors[] = $error;
-                        continue;
-                    }
-
-                    $existingStudent = Student::where('email', $studentData['email'])->first();
-                    if ($existingStudent) {
-                        $warning = "Student with email {$studentData['email']} already exists (ID: {$existingStudent->id})";
-                        $errors[] = $warning;
-                        continue;
-                    }
-
-                    $insertData = [
-                        'status' => 'prombūtnē',
-                        'name' => trim($studentData['name']),
-                        'email' => trim($studentData['email']),
-                        'uuid' => \Str::uuid()->toString(),
-                        'time' => now(),
-                    ];
-
-                    $student = Student::create($insertData);
-
-                    if ($student && $student->id) {
-                        $createdStudents[] = $student;
-
-                        Log::create([
-                            'student_id' => $student->id,
-                            'user_id' => Auth::id(),
-                            'action' => 'student_created',
-                            'description' => "Student '{$student->name}' created via mass upload by " . Auth::user()->name,
-                            'time' => now(),
-                        ]);
-                    } else {
-                        $errors[] = "Failed to create student {$studentData['name']} - creation returned null";
-                    }
-
-                } catch (\Exception $e) {
-                    $errors[] = "Error creating student {$studentData['name']}: ".$e->getMessage();
-                }
+                $createdStudents[] = $student;
             }
 
             Log::create([
@@ -402,82 +358,6 @@ class StudentController extends Controller
             return response()->json([
                 'status' => 200,
                 'message' => count($createdStudents).' students uploaded successfully',
-                'data' => $createdStudents,
-                'errors' => $errors,
-                'total_processed' => count($data),
-                'total_created' => count($createdStudents),
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Failed to upload students',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function index(): JsonResponse
-    {
-        try {
-            $students = Student::all();
-
-            return response()->json([
-                'status' => 200,
-                'data' => $students,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Failed to retrieve students',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function show(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:students,id',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->incorrectPayload($validator->errors());
-        }
-
-        $student = Student::with('user')->find($request->id);
-
-        if (! $student) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Student not found',
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => 200,
-            'data' => $student,
-        ]);
-    }
-
-    public function getByClass(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'class' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->incorrectPayload($validator->errors());
-        }
-
-        try {
-            $students = Student::with('user')
-                ->where('class', $request->class)
-                ->get();
-
-            return response()->json([
-                'status' => 200,
-                'data' => $students,
             ]);
 
         } catch (\Exception $e) {
