@@ -47,7 +47,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_created',
-                'description' => "Student '{$student->name}' created by " . Auth::user()->name,
+                'description' => "Student '{$student->name}' created by ".Auth::user()->name,
                 'time' => now(),
             ]);
 
@@ -136,7 +136,7 @@ class StudentController extends Controller
                     'student_id' => $student->id,
                     'user_id' => Auth::id(),
                     'action' => 'student_updated',
-                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . ". Changes: " . implode(', ', $changes),
+                    'description' => "Student '{$student->name}' updated by ".Auth::user()->name.'. Changes: '.implode(', ', $changes),
                     'time' => now(),
                 ]);
             }
@@ -193,7 +193,7 @@ class StudentController extends Controller
                 'student_id' => $studentId,
                 'user_id' => Auth::id(),
                 'action' => 'student_deleted',
-                'description' => "Student '{$studentName}' deleted by " . Auth::user()->name,
+                'description' => "Student '{$studentName}' deleted by ".Auth::user()->name,
                 'time' => now(),
             ]);
 
@@ -248,7 +248,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_updated',
-                'description' => "Student '{$student->name}' status updated by " . Auth::user()->name . " from '{$oldStatus}' to '{$request->status}'",
+                'description' => "Student '{$student->name}' status updated by ".Auth::user()->name." from '{$oldStatus}' to '{$request->status}'",
                 'time' => now(),
             ]);
 
@@ -298,7 +298,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_updated',
-                'description' => "Student '{$student->name}' email updated by " . Auth::user()->name . " from '{$oldEmail}' to '{$request->email}'",
+                'description' => "Student '{$student->name}' email updated by ".Auth::user()->name." from '{$oldEmail}' to '{$request->email}'",
                 'time' => now(),
             ]);
 
@@ -348,7 +348,7 @@ class StudentController extends Controller
                     'email' => $student->email,
                     'student_id' => $student->id,
                     'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
-                    'uuid' => Str::uuid()->toString(),
+                    'uuid' => $student->uuid,
                 ]);
 
                 $createdStudents[] = $student;
@@ -358,7 +358,7 @@ class StudentController extends Controller
                 'student_id' => null,
                 'user_id' => Auth::id(),
                 'action' => 'mass_student_upload',
-                'description' => "Mass student upload by " . Auth::user()->name . ". Created: " . count($createdStudents) . ", Errors: " . count($errors) . ", Total processed: " . count($data),
+                'description' => 'Mass student upload by '.Auth::user()->name.'. Created: '.count($createdStudents).', Errors: '.count($errors).', Total processed: '.count($data),
                 'time' => now(),
             ]);
 
