@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccessCredential;
 use App\Models\Log;
 use App\Models\Student;
 use Illuminate\Http\Request;
@@ -15,8 +14,7 @@ class GateController extends Controller
         $card = $request->all()['Card'];
         $ip = $request->all()['IP'];
         $reader = $request->all()['Reader'];
-        $aC = AccessCredential::query()->where('uuid', $card)->first();
-        $student = Student::query()->where('id', $aC->student_id)->first();
+        $student = Student::query()->where('uuid', $card)->first();
 
         if ($student) {
             $lastLog = Log::query()->where('student_id', $student->id)->orderBy('time', 'desc')->first();
@@ -25,19 +23,19 @@ class GateController extends Controller
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'exit',
-                    'description' => $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'),
+                    'description' => $student->name.' izgāja āra '.now()->format('Y-m-d H:i:s'),
                 ]);
-                $student->status = "prombūtnē";
+                $student->status = 'prombūtnē';
                 $student->save();
                 $this->OpenGate($ip, $reader);
-            }elseif ($reader == 0 && $lastLog->action == 'exit') {
+            } elseif ($reader == 0 && $lastLog->action == 'exit') {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'entry',
-                    'description' => $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'),
+                    'description' => $student->name.' ienāca iekšā '.now()->format('Y-m-d H:i:s'),
                 ]);
-                $student->status = "klātbūtnē";
+                $student->status = 'klātbūtnē';
                 $student->save();
                 $this->OpenGate($ip, $reader);
             }
