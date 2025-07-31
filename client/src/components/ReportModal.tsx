@@ -194,21 +194,6 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <p>Izveidots: ${new Date().toLocaleString('lv-LV')}</p>
           </div>
 
-          <div class="summary">
-            <div class="summary-card">
-              <h3>Kopā ierakstu</h3>
-              <p style="font-size: 24px; margin: 0;">${logs.length}</p>
-            </div>
-            <div class="summary-card">
-              <h3>Unikāli skolēni</h3>
-              <p style="font-size: 24px; margin: 0;">${new Set(logs.map((l: LogEntry) => l.student_id)).size}</p>
-            </div>
-            <div class="summary-card">
-              <h3>Darbību veidi</h3>
-              <p style="font-size: 24px; margin: 0;">${reportData.actionStats.length}</p>
-            </div>
-          </div>
-
           <h2>Pēdējās aktivitātes</h2>
           <table>
             <thead>
