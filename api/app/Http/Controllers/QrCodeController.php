@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class QrCodeController extends Controller
 {
@@ -40,9 +39,9 @@ class QrCodeController extends Controller
         try {
             $accessCredential = AccessCredential::create([
                 'email' => $student->email,
-                'qrcode_url' => $request->attachmentUrl,
+                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
                 'student_id' => $student->id,
-                'uuid' => Str::uuid()->toString(),
+                'uuid' => $student->uuid,
             ]);
 
             $emailSent = false;
