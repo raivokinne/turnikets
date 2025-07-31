@@ -68,6 +68,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
                 'name': get_row_value(header_indices.get('name')),
                 'gender': get_row_value(header_indices.get('gender')),
                 'status': get_row_value(header_indices.get('status')) or '',
+                'grupa': get_row_value(header_indices.get('grupa')),
                 'card_number': get_row_value(header_indices.get('card number')),
                 'authority': get_row_value(header_indices.get('authority')),
                 'qr_code': get_row_value(header_indices.get('qr code')),
