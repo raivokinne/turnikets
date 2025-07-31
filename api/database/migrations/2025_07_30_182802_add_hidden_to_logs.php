@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('access_credentials', function (Blueprint $table) {
-            $table->uuid('uuid')->unique()->after('id');
+        Schema::table('logs', function (Blueprint $table) {
+            $table->boolean('hidden')->default(false);
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('access_credentials', function (Blueprint $table) {
-            $table->dropColumn('uuid');
+        Schema::table('logs', function (Blueprint $table) {
+            $table->dropColumn('hidden');
         });
     }
 };
