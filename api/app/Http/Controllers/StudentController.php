@@ -18,11 +18,13 @@ class StudentController extends Controller
     public function index(): JsonResponse
     {
         $students = Student::all();
+
         return response()->json([
             'success' => true,
-            'data' => $students
-            ]);
+            'data' => $students,
+        ]);
     }
+
     /**
      * Create new student
      */
@@ -346,18 +348,19 @@ class StudentController extends Controller
                     'status' => 'prombūtnē',
                     'name' => trim($studentData['name']),
                     'email' => trim($studentData['email']),
+                    'class' => trim($studentData['grupa']),
                     'uuid' => Str::uuid()->toString(),
                     'time' => now(),
                 ];
 
                 $student = Student::query()->create($insertData);
 
-                AccessCredential::create([
-                    'email' => $student->email,
-                    'student_id' => $student->id,
-                    'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
-                    'uuid' => $student->uuid,
-                ]);
+                /* AccessCredential::create([ */
+                /*     'email' => $student->email, */
+                /*     'student_id' => $student->id, */
+                /*     'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30', */
+                /*     'uuid' => $student->uuid, */
+                /* ]); */
 
                 $createdStudents[] = $student;
             }
