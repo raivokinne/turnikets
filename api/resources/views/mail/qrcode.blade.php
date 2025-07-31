@@ -9,7 +9,7 @@
 
     <p>Te būs atjaunots, vieglāk noskenējams QR kods lietošanai dienesta viesnīcā!</p>
 
-    <p><img src="{{ $qrUrl }}" alt="QR kods" style="width:200px; height:auto; margin: 20px 0;"></p>
+    <p><img src="{{ $qrUrl }}" alt="QR kods" style="width:400px; height:auto; margin: 20px 0;"></p>
 
     <p>Saglabā to telefonā! Tas ir nepieciešams, lai autorizētos dienesta viesnīcā.</p>
 
