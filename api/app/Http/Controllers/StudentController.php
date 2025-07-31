@@ -353,14 +353,15 @@ class StudentController extends Controller
                     'time' => now(),
                 ];
 
-                $student = Student::query()->create($insertData);
+                $exists = Student::query()->where('email', $insertData['email'])->get();
+                if ($exists) {
+                    return response()->json([
+                        'status' => 409,
+                        'message' => 'Student with this email already exists',
+                    ], 409);
+                }
 
-                /* AccessCredential::create([ */
-                /*     'email' => $student->email, */
-                /*     'student_id' => $student->id, */
-                /*     'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30', */
-                /*     'uuid' => $student->uuid, */
-                /* ]); */
+                $student = Student::query()->create($insertData);
 
                 $createdStudents[] = $student;
             }

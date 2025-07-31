@@ -43,7 +43,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
         normalized_headers = [h.lower() for h in headers]
         header_indices = {header: idx for idx, header in enumerate(normalized_headers)}
 
-        required_headers = ['name', 'gender', 'card number', 'grupa', 'authority', 'qr code', 'validity period', 'address']
+        required_headers = ['name', 'grupa', 'email']
         missing_headers = [h for h in required_headers if h not in normalized_headers]
 
         if missing_headers:
@@ -53,28 +53,18 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
             if all(cell is None or str(cell).strip() == '' for cell in row):
                 continue
 
-            # Helper function to safely get row value by index
             def get_row_value(index: Optional[int]) -> Optional[str]:
                 if index is not None and index < len(row):
                     cell_value = row[index]
                     if cell_value is None:
                         return None
-                    # Convert any cell value to string, handling various openpyxl types
                     return str(cell_value) if not isinstance(cell_value, str) else cell_value
                 return None
 
             entry = {
-                'number': get_row_value(header_indices.get('number')) or '',
                 'name': get_row_value(header_indices.get('name')),
-                'gender': get_row_value(header_indices.get('gender')),
-                'status': get_row_value(header_indices.get('status')) or '',
                 'grupa': get_row_value(header_indices.get('grupa')),
-                'card_number': get_row_value(header_indices.get('card number')),
-                'authority': get_row_value(header_indices.get('authority')),
-                'qr_code': get_row_value(header_indices.get('qr code')),
-                'validity_period': str(get_row_value(header_indices.get('validity period')) or ''),
                 'email': get_row_value(header_indices.get('address')),
-                'qr_url': get_row_value(header_indices.get('qr code url')) or ''
             }
 
             data.append(entry)
@@ -136,7 +126,7 @@ def upload_excel():
                 }), 400
 
             try:
-                backend_url = 'http://192.168.11.200:8000/api/mass-update'  # <- change if needed
+                backend_url = 'http://localhost:8000/api/mass-update'  # <- change if needed
                 payload = {
                     'data': result['data'],
                     'total_records': result['total_records']
@@ -148,11 +138,6 @@ def upload_excel():
                         'status': 'success',
                         'message': 'Veiksmīgi apstrādāti dati un nosūtīti uz backend'
                     }), 200
-                else:
-                    return jsonify({
-                        'status': 'error',
-                        'message': f'Neizdevās nosūtīt datus uz backend: {response.status_code}'
-                    }), 500
 
             except requests.RequestException as e:
                 return jsonify({

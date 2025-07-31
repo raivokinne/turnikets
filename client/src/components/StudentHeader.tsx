@@ -22,7 +22,7 @@ const StudentHeader: React.FC<SimpleHeaderProps> = ({
     setSelectedStatus,
     selectedStatus,
     classes
-                                                    }) => {
+}) => {
     return (
         <div className="bg-white rounded-lg shadow-sm p-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
