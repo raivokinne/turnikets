@@ -11,14 +11,18 @@ class GateController extends Controller
 {
     public function RequestCardEvent(Request $request): void
     {
+        error_log("Request Card event");
         $card = $request->all()['Card'];
+        error_log($card);
         $ip = $request->all()['IP'];
+        error_log($ip);
         $reader = $request->all()['Reader'];
+        error_log($reader);
         $student = Student::query()->where('uuid', $card)->first();
+        error_log($student->name);
 
         if ($student) {
-            $lastLog = Log::query()->where('student_id', $student->id)->orderBy('time', 'desc')->first();
-            if ($reader == 1 && $lastLog->action == 'entry') {
+            if ($reader == 1) {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
@@ -27,8 +31,11 @@ class GateController extends Controller
                 ]);
                 $student->status = 'prombūtnē';
                 $student->save();
-                $this->OpenGate($ip, $reader);
-            } elseif ($reader == 0 && $lastLog->action == 'exit') {
+                Http::get('http://'.$ip.'/cdor.cgi', [
+                    'open' => 1,
+                    'door' => $reader,
+                ]);
+            } elseif ($reader == 0 ) {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
@@ -37,7 +44,10 @@ class GateController extends Controller
                 ]);
                 $student->status = 'klātbūtnē';
                 $student->save();
-                $this->OpenGate($ip, $reader);
+                Http::get('http://'.$ip.'/cdor.cgi', [
+                    'open' => 1,
+                    'door' => $reader,
+                ]);
             }
 
         }
@@ -45,17 +55,9 @@ class GateController extends Controller
 
     public function RequestStatus(Request $request): void
     {
-        foreach ($request->all() as $key => $value) { // debug un ari nekam citam drosvien netiks izmantots
-            error_log($key.': '.$value);
-        }
-    }
-
-    private function OpenGate(string $gateIp, int $reader): void
-    {
-        Http::get($gateIp, [ // env var iet kast ip in gudrak tik un ta
-            'open' => $reader, // lai veras uz pareizo virzienu abiem jabut vienadiem
-            'door' => $reader,
-        ]);
+//        foreach ($request->all() as $key => $value) { // debug un ari nekam citam drosvien netiks izmantots
+//            error_log($key.': '.$value);
+//        }
     }
 
     private function OpenBothGate(string $gateIp1, string $gateIp2): void

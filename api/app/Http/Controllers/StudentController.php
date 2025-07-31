@@ -15,6 +15,14 @@ use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        $students = Student::all();
+        return response()->json([
+            'success' => true,
+            'data' => $students
+            ]);
+    }
     /**
      * Create new student
      */

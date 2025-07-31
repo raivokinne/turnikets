@@ -59,7 +59,7 @@ const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await axios.post('http://localhost:5000/upload/excel', formData, {
+            const response = await axios.post('http://192.168.11.200:5000/upload/excel', formData, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'multipart/form-data',
