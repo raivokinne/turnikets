@@ -43,7 +43,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
         normalized_headers = [h.lower() for h in headers]
         header_indices = {header: idx for idx, header in enumerate(normalized_headers)}
 
-        required_headers = ['name', 'gender', 'card number', 'authority', 'qr code', 'validity period', 'address']
+        required_headers = ['name', 'gender', 'card number', 'grupa', 'authority', 'qr code', 'validity period', 'address']
         missing_headers = [h for h in required_headers if h not in normalized_headers]
 
         if missing_headers:
