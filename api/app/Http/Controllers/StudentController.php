@@ -344,6 +344,13 @@ class StudentController extends Controller
 
                 $student = Student::query()->create($insertData);
 
+                AccessCredential::create([
+                    'email' => $student->email,
+                    'student_id' => $student->id,
+                    'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
+                    'uuid' => Str::uuid()->toString(),
+                ]);
+
                 $createdStudents[] = $student;
             }
 
