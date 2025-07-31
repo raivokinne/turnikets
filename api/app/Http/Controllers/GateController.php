@@ -27,7 +27,10 @@ class GateController extends Controller
                 ]);
                 $student->status = 'prombūtnē';
                 $student->save();
-                $this->OpenGate($ip, $reader);
+                Http::get($gateIp, [
+                    'open' => $reader,
+                    'door' => $reader,
+                ]);
             } elseif ($reader == 0 && $lastLog->action == 'exit') {
                 Log::create([
                     'time' => now(),
@@ -37,7 +40,10 @@ class GateController extends Controller
                 ]);
                 $student->status = 'klātbūtnē';
                 $student->save();
-                $this->OpenGate($ip, $reader);
+                Http::get($gateIp, [
+                    'open' => $reader,
+                    'door' => $reader,
+                ]);
             }
 
         }
