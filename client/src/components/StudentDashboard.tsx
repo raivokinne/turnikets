@@ -17,7 +17,7 @@ const SimpleStudentDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState('attendance');
 
     useEffect(() => {
-        async function fetchData() {
+        const timer = setInterval(async () => {
             try {
                 const logs = await logsApi.getLogs();
 
@@ -39,8 +39,9 @@ const SimpleStudentDashboard: React.FC = () => {
                 setAttendanceData([]);
                 setLogStudentData([]);
             }
-        }
-        fetchData();
+        }, 5000);
+
+        return () => clearInterval(timer);
     }, []);
 
     const classes = Array.from(new Set(attendanceData.map(s => s.class ?? ''))).filter(Boolean).sort();
