@@ -23,7 +23,7 @@ class GateController extends Controller
 
         if ($student) {
             if ($reader == 1) {
-                Log::create([
+                Log::query()->create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'exit',
@@ -36,7 +36,7 @@ class GateController extends Controller
                     'door' => $reader,
                 ]);
             } elseif ($reader == 0 ) {
-                Log::create([
+                Log::query()->create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'entry',

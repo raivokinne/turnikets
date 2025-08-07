@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { LogEntry } from '@/types/logs';
 import { useLogs } from '@/hooks/useLogs';
 
+// TypeScript interfaces for Report
 interface FilterState {
     startDate: string;
     endDate: string;
@@ -70,6 +71,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const generateReport = (): void => {
         if (!logs.length) return;
 
+        // Process attendance data
         interface AttendanceAccumulator {
             [date: string]: {
                 date: string;
@@ -194,6 +196,21 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <p>Izveidots: ${new Date().toLocaleString('lv-LV')}</p>
           </div>
 
+          <div class="summary">
+            <div class="summary-card">
+              <h3>Kopā ierakstu</h3>
+              <p style="font-size: 24px; margin: 0;">${logs.length}</p>
+            </div>
+            <div class="summary-card">
+              <h3>Unikāli skolēni</h3>
+              <p style="font-size: 24px; margin: 0;">${new Set(logs.map((l: LogEntry) => l.student_id)).size}</p>
+            </div>
+            <div class="summary-card">
+              <h3>Darbību veidi</h3>
+              <p style="font-size: 24px; margin: 0;">${reportData.actionStats.length}</p>
+            </div>
+          </div>
+
           <h2>Pēdējās aktivitātes</h2>
           <table>
             <thead>
@@ -280,7 +297,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
                     <div>
@@ -315,12 +332,13 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 </div>
 
                 <div className="p-6">
+                    {/* Filters */}
                     <div className="bg-gray-50 rounded-lg p-6 mb-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Filter size={20} />
                             <h3 className="text-lg font-semibold">Filtri</h3>
                         </div>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sākuma datums</label>
                                 <input
@@ -339,6 +357,227 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Skolēna ID</label>
+                                <input
+                                    type="number"
+                                    value={filters.studentId}
+                                    onChange={(e) => handleFilterChange('studentId', e.target.value)}
+                                    placeholder="Ievadiet skolēna ID"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Darbība</label>
+                                <select
+                                    value={filters.action}
+                                    onChange={(e) => handleFilterChange('action', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Visas darbības</option>
+                                    <option value="login">Pieteikšanās</option>
+                                    <option value="logout">Atteikšanās</option>
+                                    <option value="entry">Ieeja</option>
+                                    <option value="exit">Izeja</option>
+                                    <option value="profile_update">Profila atjaunošana</option>
+                                    <option value="user_created">Lietotājs izveidots</option>
+                                </select>
+                            </div>
+                            <div className="flex items-end">
+                                <button
+                                    onClick={applyFilters}
+                                    disabled={loading}
+                                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                                    type="button"
+                                >
+                                    {loading ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    ) : (
+                                        <Search size={16} />
+                                    )}
+                                    Lietot filtrus
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <div className="bg-white rounded-lg shadow-sm p-6 border">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
+                                    <p className="text-2xl font-bold text-gray-900">{logs.length}</p>
+                                </div>
+                                <FileText className="h-8 w-8 text-blue-600" />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-6 border">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Unikāli skolēni</p>
+                                    <p className="text-2xl font-bold text-gray-900">{getUniqueStudentsCount()}</p>
+                                </div>
+                                <Users className="h-8 w-8 text-green-600" />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-6 border">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Šodienas iejas</p>
+                                    <p className="text-2xl font-bold text-gray-900">{getTodaysEntries()}</p>
+                                </div>
+                                <Clock className="h-8 w-8 text-purple-600" />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-lg shadow-sm p-6 border">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Darbību veidi</p>
+                                    <p className="text-2xl font-bold text-gray-900">{reportData.actionStats.length}</p>
+                                </div>
+                                <BarChart3 className="h-8 w-8 text-orange-600" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="bg-white rounded-lg shadow-sm border">
+                        <div className="border-b border-gray-200">
+                            <nav className="-mb-px flex space-x-8 px-6">
+                                {([
+                                    { key: 'overview', label: 'Pārskats' },
+                                    { key: 'attendance', label: 'Apmeklētība' },
+                                    { key: 'analytics', label: 'Analītika' },
+                                    { key: 'timeline', label: 'Laika skala' }
+                                ] as { key: TabType; label: string }[]).map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key)}
+                                        className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
+                                            ? 'border-blue-500 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        type="button"
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+
+                        <div className="p-6">
+                            {activeTab === 'overview' && (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 className="text-lg font-semibold mb-4">Darbību sadalījums</h4>
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <RechartsPieChart>
+                                                <Pie
+                                                    dataKey="value"
+                                                    data={reportData.actionStats}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    outerRadius={80}
+                                                    label={({ name, percent }: { name: string; percent: number }) =>
+                                                        `${name} ${(percent * 100).toFixed(0)}%`
+                                                    }
+                                                >
+                                                    {reportData.actionStats.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip />
+                                            </RechartsPieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-semibold mb-4">Klašu aktivitāte</h4>
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <BarChart data={reportData.classStats}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="name" />
+                                                <YAxis />
+                                                <Tooltip content={<CustomTooltip />} />
+                                                <Bar dataKey="value" fill="#8884d8" />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'attendance' && (
+                                <div>
+                                    <h4 className="text-lg font-semibold mb-4">Dienas apmeklētības tendences</h4>
+                                    <ResponsiveContainer width="100%" height={400}>
+                                        <BarChart data={reportData.attendance}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="date" />
+                                            <YAxis />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend />
+                                            <Bar dataKey="entries" fill="#82ca9d" name="Iejas" />
+                                            <Bar dataKey="exits" fill="#8884d8" name="Izejas" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+
+                            {activeTab === 'analytics' && (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <h5 className="font-semibold mb-3">Aktīvākie skolēni</h5>
+                                            <div className="space-y-2">
+                                                {getMostActiveStudents().map(([name, count]) => (
+                                                    <div key={name} className="flex justify-between">
+                                                        <span className="text-sm">{name}</span>
+                                                        <span className="text-sm font-medium">{count} aktivitātes</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <h5 className="font-semibold mb-3">Aktivitātes maksimuma stundas</h5>
+                                            <div className="space-y-2">
+                                                {getPeakActivityHours().map(([hour, count]) => (
+                                                    <div key={hour} className="flex justify-between">
+                                                        <span className="text-sm">{hour}</span>
+                                                        <span className="text-sm font-medium">{count} aktivitātes</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'timeline' && (
+                                <div>
+                                    <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes laika skala</h4>
+                                    <div className="space-y-4">
+                                        {reportData.timeline.map((log: LogEntry) => (
+                                            <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                                                <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {log.student?.name || 'Nezināms skolēns'} - {log.action || 'Nezināma darbība'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">{log.time}</p>
+                                                    </div>
+                                                    {log.description && (
+                                                        <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Klase: {log.student?.class || 'N/A'} | ID: {log.student_id}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

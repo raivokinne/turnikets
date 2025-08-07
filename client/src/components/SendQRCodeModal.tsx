@@ -146,7 +146,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    // Use the debounced search term for actual filtering
     const finalFilteredStudents = useMemo(() => {
         if (!debouncedSearchTerm.trim()) return students;
 
@@ -158,7 +157,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
         );
     }, [debouncedSearchTerm, students]);
 
-    // Memoized callbacks to prevent child re-renders
     const toggleStudentSelection = useCallback((student: Student) => {
         setSelectedStudentIds(prev => {
             const newSet = new Set(prev);
@@ -214,13 +212,11 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
 
         toast.info(`Sūta QR kodus ${selectedStudentsArray.length} atlasītajiem skolēniem`);
 
-        // Send in batches to prevent overwhelming the system
         const batchSize = 5;
         for (let i = 0; i < selectedStudentsArray.length; i += batchSize) {
             const batch = selectedStudentsArray.slice(i, i + batchSize);
             await Promise.allSettled(batch.map(student => sendQRCode(student)));
 
-            // Small delay between batches to prevent rate limiting
             if (i + batchSize < selectedStudentsArray.length) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
@@ -229,7 +225,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
         toast.success(`QR kodi nosūtīti ${selectedStudentsArray.length} skolēniem`);
     }, [finalFilteredStudents, selectedStudentIds, sendQRCode]);
 
-    // Virtualization for large lists (only render visible items)
     const ITEM_HEIGHT = 73; // Approximate height of each row
     const CONTAINER_HEIGHT = 400; // Max height of the scrollable area
     const VISIBLE_ITEMS = Math.ceil(CONTAINER_HEIGHT / ITEM_HEIGHT) + 2; // Buffer items
