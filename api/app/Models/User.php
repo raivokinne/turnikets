@@ -18,6 +18,7 @@ class User extends Authenticatable
         'status',
         'class',
         'avatar',
+        'uuid',
         'password',
     ];
 
