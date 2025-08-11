@@ -79,3 +79,12 @@ export interface UserFormErrors {
     password?: string[];
     password_confirmation?: string[];
 }
+
+export type UserType = {
+    id: number;
+    name: string;
+    email: string;
+    role: 'admin' | 'employee';
+    class?: string;
+    created_at: string;
+};
