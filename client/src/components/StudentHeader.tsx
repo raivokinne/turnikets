@@ -21,8 +21,7 @@ const StudentHeader: React.FC<SimpleHeaderProps> = ({
     setSelectedClass,
     setSelectedStatus,
     selectedStatus,
-    classes,
-    statuses
+    classes
 }) => {
     return (
         <div className="bg-white rounded-lg shadow-sm p-4">

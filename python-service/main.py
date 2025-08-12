@@ -3,18 +3,20 @@ from flask import Flask, request, jsonify
 import os
 from werkzeug.utils import secure_filename
 import tempfile
-from typing import Dict, List, Union, Optional
+from typing import Dict, Optional, Any
 import requests
 
 app = Flask(__name__)
 
 # Configuration
-ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'xlsm'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
 
 def allowed_file(filename: str) -> bool:
     """Check if the uploaded file has an allowed extension"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def validate_file_size(file) -> bool:
     """Check if file size is within limits"""
@@ -23,87 +25,60 @@ def validate_file_size(file) -> bool:
     file.seek(0)  # Reset file pointer
     return size <= MAX_FILE_SIZE
 
-def process_excel_file(file_path: str) -> Dict[str, Union[bool, str, int, List[str], List[Dict[str, Optional[str]]]]]:
-    """Process Excel file and extract student data"""
+
+def process_excel_file(file_path: str) -> Dict[str, Any]:
+    """Process Excel file and extract access card data"""
     try:
         wb = openpyxl.load_workbook(file_path)
         ws = wb.active
 
         if ws is None:
-            return {
-                'error': 'Nav atrasts aktīvs darblapas Excel failā'
-            }
+            return {'error': 'Nav atrasts aktīvs darblapas Excel failā'}
 
-        data: List[Dict[str, Optional[str]]] = []
-        headers: List[str] = []
+        data = []
+        headers = [cell.value.strip() if isinstance(cell.value, str) else str(cell.value).strip()
+                   for cell in next(ws.iter_rows(min_row=1, max_row=1))]
 
-        first_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
-        headers = [str(cell).strip() if cell is not None else '' for cell in first_row]
+        # Normalize headers for comparison
+        normalized_headers = [h.lower() for h in headers]
+        header_indices = {header: idx for idx, header in enumerate(normalized_headers)}
 
-        required_headers = ['vārds un uzvārds', 'klase', 'e-pasts']
-        header_lower = [h.lower() for h in headers]
+        required_headers = ['name', 'grupa', 'email']
+        missing_headers = [h for h in required_headers if h not in normalized_headers]
 
-        missing_headers = [req for req in required_headers if req not in header_lower]
         if missing_headers:
-            return {
-                'error': f'Trūkst nepieciešamo kolonnu: {", ".join(missing_headers)}'
-            }
+            return {'error': f'Trūkst nepieciešamo kolonnu: {", ".join(missing_headers)}'}
 
-        # Find column indices
-        name_idx: Optional[int] = None
-        class_idx: Optional[int] = None
-        email_idx: Optional[int] = None
-        status_idx: Optional[int] = None
-
-        for i, header in enumerate(header_lower):
-            if 'vārds' in header and 'uzvārds' in header:
-                name_idx = i
-            elif 'klase' in header:
-                class_idx = i
-            elif 'e-pasts' in header or 'epasts' in header or 'email' in header:
-                email_idx = i
-            elif 'statuss' in header or 'status' in header:
-                status_idx = i
-
-        row_count = 0
         for row in ws.iter_rows(min_row=2, values_only=True):
-            # Skip empty rows
             if all(cell is None or str(cell).strip() == '' for cell in row):
                 continue
 
-            name = str(row[name_idx]).strip() if name_idx is not None and row[name_idx] is not None else ''
-            class_name = str(row[class_idx]).strip() if class_idx is not None and row[class_idx] is not None else ''
-            email = str(row[email_idx]).strip() if email_idx is not None and row[email_idx] is not None else ''
-            status = str(row[status_idx]).strip() if status_idx is not None and row[status_idx] is not None else 'klātbutne'
+            def get_row_value(index: Optional[int]) -> Optional[str]:
+                if index is not None and index < len(row):
+                    cell_value = row[index]
+                    if cell_value is None:
+                        return None
+                    return str(cell_value) if not isinstance(cell_value, str) else cell_value
+                return None
 
-            if not name or not class_name or not email:
-                continue
-
-            if '@' not in email or '.' not in email:
-                continue
-
-            student_data = {
-                'name': name,
-                'class': class_name,
-                'email': email,
-                'status': status if status in ['klātbutne', 'prombutnē', 'gaida'] else 'klātbutne',
-                'time': None
+            entry = {
+                'name': get_row_value(header_indices.get('name')),
+                'grupa': get_row_value(header_indices.get('grupa')),
+                'email': get_row_value(header_indices.get('address')),
             }
 
-            data.append(student_data)
-            row_count += 1
+            data.append(entry)
 
         return {
             'success': True,
             'data': data,
-            'total_records': row_count,
+            'total_records': len(data),
             'headers': headers
         }
 
     except Exception as e:
-        return {
-            'error': f'Kļūda apstrādājot Excel failu: {str(e)}'
-        }
+        return {'error': f'Kļūda apstrādājot Excel failu: {str(e)}'}
+
 
 @app.route('/upload/excel', methods=['POST'])
 def upload_excel():
@@ -142,14 +117,16 @@ def upload_excel():
 
         try:
             result = process_excel_file(temp_path)
-
             os.unlink(temp_path)
 
             if 'error' in result:
-                return
+                return jsonify({
+                    'status': 'error',
+                    'message': result['error']
+                }), 400
 
             try:
-                backend_url = 'http://localhost:8000/api/mass-update'
+                backend_url = 'http://localhost:8000/api/mass-update'  # <- change if needed
                 payload = {
                     'data': result['data'],
                     'total_records': result['total_records']
@@ -159,18 +136,22 @@ def upload_excel():
                 if response.status_code == 200:
                     return jsonify({
                         'status': 'success',
-                        'message': f'Veiksmīgi apstrādāti'
+                        'message': 'Veiksmīgi apstrādāti dati un nosūtīti uz backend'
                     }), 200
-                else:
-                    return
 
             except requests.RequestException as e:
-                return
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Nevar izveidot savienojumu ar backend: {str(e)}'
+                }), 500
 
         except Exception as e:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
-            raise e
+            return jsonify({
+                'status': 'error',
+                'message': f'Faila apstrādes kļūda: {str(e)}'
+            }), 500
 
     except Exception as e:
         return jsonify({
@@ -178,5 +159,6 @@ def upload_excel():
             'message': f'Servera kļūda: {str(e)}'
         }), 500
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

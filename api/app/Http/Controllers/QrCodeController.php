@@ -5,12 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\QrCodeMail;
 use App\Models\AccessCredential;
 use App\Models\Student;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class QrCodeController extends Controller
 {
@@ -22,6 +20,7 @@ class QrCodeController extends Controller
         $validator = Validator::make($request->all(), [
             'to' => 'required|email|exists:students,email',
             'attachmentUrl' => 'required|url',
+            'data' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -40,9 +39,9 @@ class QrCodeController extends Controller
         try {
             $accessCredential = AccessCredential::create([
                 'email' => $student->email,
-                'qrcode_url' => $request->attachmentUrl,
+                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
                 'student_id' => $student->id,
-                'uuid' => Str::uuid()->toString(),
+                'uuid' => $student->uuid,
             ]);
 
             $emailSent = false;
@@ -99,7 +98,7 @@ class QrCodeController extends Controller
             return $this->incorrectPayload($validator->errors());
         }
 
-        $accessCredential = AccessCredential::find($request->id);
+        $accessCredential = AccessCredential::query()->find($request->id);
 
         if (! $accessCredential) {
             return response()->json([
