@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccessCredential;
 use App\Models\Student;
 use App\Models\Log;
+use App\Services\NotificationService;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -20,24 +21,43 @@ class GateController extends Controller
         $student = Student::query()->where('id', $aC->student_id)->first();
 
         if ($student) {
-            $lastLog = Log::query()->where('student_id', $student->id)->orderBy('time', 'desc')->first();
-            if ($reader == 1 && $lastLog->action == 'entry') {
+            $notifier = app(NotificationService::class);
+            $lastLog = Log::query()
+                ->where('student_id', $student->id)
+                ->orderBy('time', 'desc')
+                ->first();
+
+            // Determine intended action based on reader direction
+            // reader == 1 => exiting, reader == 0 => entering
+            $intendedAction = $reader == 1 ? 'exit' : 'entry';
+
+            // If last action equals intended action, this is a consecutive same action -> send warning and do NOT open the gate
+            if ($lastLog && $lastLog->action === $intendedAction) {
+                $notifier->checkConsecutiveAction($student, $intendedAction);
+                return;
+            }
+
+            // Otherwise proceed: create log, open gate, and send normal notification
+            if ($intendedAction === 'exit') {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'exit',
                     'description' => $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'),
                 ]);
-                $this->OpenGate($ip, $reader);
-            }elseif ($reader == 0 && $lastLog->action == 'exit') {
+            } else {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'entry',
                     'description' => $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'),
                 ]);
-                $this->OpenGate($ip, $reader);
             }
+
+            $this->OpenGate($ip, $reader);
+            $notifier->sendEntryExitNotification($student, $intendedAction, $intendedAction === 'exit'
+                ? $student->name . ' izgāja āra '
+                : $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'));
 
         }
     }
