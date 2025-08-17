@@ -69,19 +69,6 @@ const UserForm: React.FC<{
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="class" className="text-right">
-                    Klase
-                </Label>
-                <Input
-                    id="class"
-                    value={formData.class}
-                    onChange={(e) => handleInputChange('class', e.target.value)}
-                    className="col-span-3"
-                    placeholder="Ievadiet klasi (neobligāti)"
-                />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="password" className="text-right">
                     {isEdit ? 'Jauna parole' : 'Parole'}
                 </Label>

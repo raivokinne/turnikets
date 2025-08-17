@@ -6,12 +6,21 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserController;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('AcsDataApi/RequestStatus', [GateController::class, 'RequestStatus']);
 Route::post('AcsDataApi/RequestCardEvent', [GateController::class, 'RequestCardEvent']);
 Route::post('mass-update', [StudentController::class, 'massUpdate']);
+
+Route::get('test', function () {
+    $student = Student::where('name', 'Emils')->first();
+
+    $notifier = app(\App\Services\NotificationService::class);
+
+    $notifier->sendConsecutiveActionWarning($student, 'entry');
+});
 
 Route::group(['prefix' => 'auth'], function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -63,5 +72,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('user', function (Request $request) {
         return $request->user();
+    });
+
+    Route::group(['prefix' => 'gate'], function () {
+        Route::post('open/{number}', [GateController::class, 'OpenGate']);
+        Route::post('toggle/{number}', [GateController::class, 'ToggleGate']);
+        Route::get('state/{number}', [GateController::class, 'getGateState']);
     });
 });
