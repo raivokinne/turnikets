@@ -9,6 +9,8 @@
       <sourceFolder url="file://$MODULE_DIR$/api/tests" isTestSource="true" packagePrefix="Tests\" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/api/vendor/laravel/telescope" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/paragonie/sodium_compat" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/pusher/pusher-php-server" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

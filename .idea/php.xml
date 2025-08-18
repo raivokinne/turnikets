@@ -135,6 +135,8 @@
       <path value="$PROJECT_DIR$/api/vendor/dragonmantank/cron-expression" />
       <path value="$PROJECT_DIR$/api/vendor/graham-campbell/result-type" />
       <path value="$PROJECT_DIR$/api/vendor/laravel/telescope" />
+      <path value="$PROJECT_DIR$/api/vendor/pusher/pusher-php-server" />
+      <path value="$PROJECT_DIR$/api/vendor/paragonie/sodium_compat" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2" />
