@@ -231,37 +231,14 @@ th { background-color: #f5f5f5; }
 </style>
 </head>
 <body>
-<div class="header">
-<h1>Aktivitāšu žurnāla atskaite</h1>
-<p>Periods: ${filters.startDate} līdz ${filters.endDate}</p>
-<p>Izveidots: ${new Date().toLocaleString('lv-LV')}</p>
-</div>
 
-<div class="summary">
-<div class="summary-card">
-<h3>Kopā ierakstu</h3>
-<p style="font-size: 24px; margin: 0;">${(logs || []).length}</p>
-</div>
-<div class="summary-card">
-<h3>Unikāli skolēni</h3>
-<p style="font-size: 24px; margin: 0;">${new Set((logs || []).map((l: LogEntry) => l.student_id)).size}</p>
-</div>
-<div class="summary-card">
-<h3>Darbību veidi</h3>
-<p style="font-size: 24px; margin: 0;">${reportData.actionStats.length}</p>
-</div>
-</div>
-
-<h2>Pēdējās aktivitātes</h2>
+<h2>aktivitātes</h2>
 <table>
 <thead>
 <tr>
 <th>Datums un laiks</th>
 <th>Skolēns</th>
-<th>E-pasts</th>
 <th>Darbība</th>
-<th>Klase</th>
-<th>Apraksts</th>
 </tr>
 </thead>
 <tbody>
@@ -269,10 +246,7 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
 <tr>
 <td>${log.time}</td>
 <td>${log.student?.name || 'N/A'}</td>
-<td>${log.student?.email || 'N/A'}</td>
 <td>${log.action || 'N/A'}</td>
-<td>${log.student?.class || 'N/A'}</td>
-<td>${log.description || ''}</td>
 </tr>
 `).join('')}
 </tbody>
