@@ -329,50 +329,59 @@ class StudentController extends Controller {
 
             $data = $request->input('data');
             $createdStudents = [];
+            $errors = [];
 
             foreach ($data as $index => $studentData) {
                 $insertData = [
                     'status' => 'prombūtnē',
-                    'name' => trim($studentData['name']),
-                    'email' => trim($studentData['email']),
-                    'class' => trim($studentData['grupa']),
-                    'uuid' => Str::uuid()->toString(),
-                    'time' => now(),
+                    'name'   => trim($studentData['name'] ?? ''),
+                    'email'  => trim($studentData['email'] ?? ''),
+                    'class'  => trim($studentData['grupa'] ?? ''),
+                    'uuid'   => Str::uuid()->toString(),
+                    'time'   => now(),
                 ];
+
+                if ($insertData['email'] === '') {
+                    $errors[] = "Row $index: Missing email";
+                    continue;
+                }
 
                 $exists = Student::query()->where('email', $insertData['email'])->first();
 
-        if ($exists && $exists->id !== $student->id) {
-            return response()->json([
-                'status' => 409,
-                'message' => 'Student with this email already exists',
-            ],  409);
+                if ($exists) {
+                    $errors[] = "Row $index: Student with email {$insertData['email']} already exists";
+                    continue;
+                }
 
                 $student = Student::query()->create($insertData);
-
                 $createdStudents[] = $student;
             }
 
             Log::create([
-                'student_id' => null,
-                'user_id' => Auth::id(),
-                'action' => 'mass_student_upload',
-                'description' => 'Mass student upload by ' . Auth::user()->name . '. Created: ' . count($createdStudents) . ', Errors: ' . count($errors) . ', Total processed: ' . count($data),
+                'student_id'  => null,
+                'user_id'     => Auth::id(),
+                'action'      => 'mass_student_upload',
+                'description' => 'Mass student upload by ' . (Auth::user()->name ?? 'system') .
+                    '. Created: ' . count($createdStudents) .
+                    ', Errors: ' . count($errors) .
+                    ', Total processed: ' . count($data),
                 'time' => now(),
             ]);
 
             return response()->json([
-                'status' => 200,
+                'status'  => 200,
                 'message' => count($createdStudents) . ' students uploaded successfully',
+                'errors'  => $errors,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 500,
+                'status'  => 500,
                 'message' => 'Failed to retrieve students',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
+
 
     private function sendEmail(Student $student): void {
         try {
