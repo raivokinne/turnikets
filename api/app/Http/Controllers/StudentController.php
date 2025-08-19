@@ -32,7 +32,7 @@ class StudentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'class' => 'required|string|max:255',
-            'status' => 'required|in:klātbutne,prombutnē,neviens',
+            'status' => 'required|in:klātbūtnē,prombūtnē,neviens',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
         ]);

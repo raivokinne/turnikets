@@ -84,11 +84,14 @@ const QuickActions: React.FC = () => {
                 [gateNumber]: !prev[gateNumber]
             }));
             console.log(`Gate ${gateNumber} toggled`);
+
+            setTimeout(() => {
+                setIsLoadingGates(false);
+            }, 3000);
         } catch (error) {
             console.error(`Failed to toggle gate ${gateNumber}:`, error);
             const states = await gatesApi.getAllGateStates();
             setGateStates(states);
-        } finally {
             setIsLoadingGates(false);
         }
     };
