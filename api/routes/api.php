@@ -41,7 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('destroy', [StudentController::class, 'destroy']);
         Route::get('by-class', [StudentController::class, 'getByClass']);
         Route::post('update-status', [StudentController::class, 'updateStatus']);
-        Route::post('update-student-email', [StudentController::class, 'updateStudentEmail']);
+        Route::post('update-profile', [StudentController::class, 'updateProfile']);
     });
 
     Route::group(['prefix' => 'logs'], function () {
