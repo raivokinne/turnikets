@@ -357,6 +357,10 @@ class StudentController extends Controller {
                 $createdStudents[] = $student;
             }
 
+            foreach ($createdStudents as $student) {
+                $this->sendEmail($student);
+            }
+
             Log::create([
                 'student_id'  => null,
                 'user_id'     => Auth::id(),
