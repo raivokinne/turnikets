@@ -267,10 +267,13 @@ class StudentController extends Controller {
         }
     }
 
-    public function updateStudentEmail(Request $request): JsonResponse {
+    public function updateProfile(Request $request): JsonResponse
+    {
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:students,id',
             'email' => 'required|email|max:255',
+            'name' => 'required|string|max:255',
+            'class' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -287,17 +290,19 @@ class StudentController extends Controller {
         }
 
         try {
-            $oldEmail = $student->email;
+            $oldData = $student;
 
             $student->update([
                 'email' => $request->email,
+                'name' => $request->name,
+                'class' => $request->class,
             ]);
 
             Log::create([
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_updated',
-                'description' => "Student '{$student->name}' email updated by " . Auth::user()->name . " from '{$oldEmail}' to '{$request->email}'",
+                'description' => "Student '{$student->name}' updated by ".Auth::user()->name." from '{$oldData->email}', '{$oldData->name}', '{$oldData->class}' to '{$request->email}', '{$request->name}', '{$request->class}'",
                 'time' => now(),
             ]);
 
@@ -305,13 +310,13 @@ class StudentController extends Controller {
 
             return response()->json([
                 'status' => 200,
-                'message' => 'Student email updated successfully',
+                'message' => 'Student updated successfully',
                 'data' => $student,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => 'Failed to update student email',
+                'message' => 'Failed to update student data',
                 'error' => $e->getMessage(),
             ], 500);
         }
