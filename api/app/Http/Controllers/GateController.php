@@ -97,17 +97,18 @@ class GateController extends Controller
     {
         try {
             $ip = $this->getGateIp($number);
-
+            $this->setGateState($number, true);
+            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => 10,
             ]);
-
+            */
             sleep(5);
-
+            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => 11,
             ]);
-
+            */
             $this->setGateState($number, false);
 
             return response()->json([
@@ -138,11 +139,11 @@ class GateController extends Controller
             $newState = !$currentState;
 
             $command = $newState ? 10 : 11;
-
+            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => $command,
             ]);
-
+            */
             $this->setGateState($number, $newState);
 
             return response()->json([

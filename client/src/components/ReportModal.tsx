@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, Download, FileText, Users, Clock, Filter, BarChart3, Search } from 'lucide-react';
+import { X, Download, FileText, Filter, Search } from 'lucide-react';
 import { LogEntry } from '@/types/logs';
 import { useLogs } from '@/hooks/useLogs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // TypeScript interfaces for Report
 interface FilterState {
@@ -32,7 +33,12 @@ interface ReportData {
     timeline: LogEntry[];
 }
 
-const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+interface ReportModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
     const { logs, getLogsByDateRange } = useLogs();
 
     const [filters, setFilters] = useState<FilterState>({
@@ -131,17 +137,37 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const applyFilters = async (): Promise<void> => {
         setLoading(true);
         try {
-            // Build start and end datetimes in format YYYY-MM-DD HH:MM:SS
-            const startDateTime = `${filters.startDate} ${filters.startTime}:00`;
-            const endDateTime = `${filters.endDate} ${filters.endTime}:59`;
+            // Send just the date portions to match Laravel validation (Y-m-d format)
+            // The time filtering will be handled on the frontend after fetching
+            await getLogsByDateRange(filters.startDate, filters.endDate);
 
-            // fetch logs from hook (assumes getLogsByDateRange will update hook's logs)
-            await getLogsByDateRange(startDateTime, endDateTime);
-
-            // After fetching we also apply frontend filters (query, action & class) to the current logs
-            // Note: this relies on the hook updating `logs`. If your hook returns the fetched
-            // logs directly, you can use that instead.
+            // After fetching, apply all frontend filters including time range
             let filteredLogs = (logs || []).slice();
+
+            // Filter by time range if specified
+            if (filters.startTime !== '00:00' || filters.endTime !== '23:59') {
+                filteredLogs = filteredLogs.filter(l => {
+                    if (!l.time) return false;
+
+                    try {
+                        // Parse ISO date string and convert to local time
+                        const logDate = new Date(l.time);
+                        const logTime = logDate.toLocaleTimeString('en-GB', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        }); // Format: "HH:MM"
+
+                        const logTimeMinutes = parseInt(logTime.split(':')[0]) * 60 + parseInt(logTime.split(':')[1]);
+                        const startTimeMinutes = parseInt(filters.startTime.split(':')[0]) * 60 + parseInt(filters.startTime.split(':')[1]);
+                        const endTimeMinutes = parseInt(filters.endTime.split(':')[0]) * 60 + parseInt(filters.endTime.split(':')[1]);
+
+                        return logTimeMinutes >= startTimeMinutes && logTimeMinutes <= endTimeMinutes;
+                    } catch (error) {
+                        return false;
+                    }
+                });
+            }
 
             // Filter by query (name or email) if provided
             if (filters.query && filters.query.trim() !== '') {
@@ -172,21 +198,41 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         }
     };
 
+    const formatDateTime = (dateTimeString: string) => {
+        if (!dateTimeString) return { date: 'N/A', time: 'N/A' };
+
+        try {
+            const date = new Date(dateTimeString);
+            const localDate = date.toLocaleDateString('lv-LV'); // Latvian format
+            const localTime = date.toLocaleTimeString('lv-LV', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            return { date: localDate, time: localTime };
+        } catch (error) {
+            return { date: 'N/A', time: 'N/A' };
+        }
+    };
+
     const exportToCSV = (): void => {
         const headers: string[] = ['Date', 'Time', 'Student ID', 'Student Name', 'Student Email', 'Action', 'Class', 'Description'];
         const csvData = [
             headers.join(','),
-            ...(logs || []).map((log: LogEntry) => [
-                (log.time || '').split(' ')[0],
-                (log.time || '').split(' ')[1] || '',
-                (log.student_id || '').toString(),
-                log.student?.name || 'N/A',
-                log.student?.email || 'N/A',
-                log.action || 'N/A',
-                log.student?.class || 'N/A',
-                log.description || ''
-            ].map((field: string) => `"${field}"`).join(','))
-        ].join('');
+            ...(logs || []).map((log: LogEntry) => {
+                const { date, time } = formatDateTime(log.time || '');
+                return [
+                    date,
+                    time,
+                    (log.student_id || '').toString(),
+                    log.student?.name || 'N/A',
+                    log.student?.email || 'N/A',
+                    log.action || 'N/A',
+                    log.student?.class || 'N/A',
+                    log.description || ''
+                ].map((field: string) => `"${field}"`).join(',');
+            })
+        ].join('\n');
 
         const blob = new Blob([csvData], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -222,19 +268,24 @@ th { background-color: #f5f5f5; }
 <table>
 <thead>
 <tr>
-<th>Datums un laiks</th>
+<th>Datums</th>
+<th>Laiks</th>
 <th>Skolēns</th>
 <th>Darbība</th>
 </tr>
 </thead>
 <tbody>
-${(logs || []).slice(0, 20).map((log: LogEntry) => `
+${(logs || []).slice(0, 20).map((log: LogEntry) => {
+            const { date, time } = formatDateTime(log.time || '');
+            return `
 <tr>
-<td>${log.time}</td>
+<td>${date}</td>
+<td>${time}</td>
 <td>${log.student?.name || 'N/A'}</td>
-<td>${log.action || 'N/A'}</td>
+<td>${log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'N/A'}</td>
 </tr>
-`).join('')}
+`;
+        }).join('')}
 </tbody>
 </table>
 </body>
@@ -246,62 +297,46 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
         printWindow.print();
     };
 
-    const getUniqueStudentsCount = (): number => {
-        return new Set((logs || []).map((l: LogEntry) => l.student_id)).size;
-    };
-
-    const getTodaysEntries = (): number => {
-        const today = new Date().toISOString().split('T')[0];
-        return (logs || []).filter((l: LogEntry) =>
-            l.action === 'entry' && (l.time || '').startsWith(today)
-        ).length;
-    };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto">
-                {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Aktivitāšu atskaites</h2>
-                        <p className="text-gray-600 mt-1">Visaptverošas žurnāla un apmeklētības analīzes</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={exportToCSV}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            type="button"
-                        >
-                            <Download size={16} />
-                            Eksportēt CSV
-                        </button>
-                        <button
-                            onClick={exportToPDF}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                            type="button"
-                        >
-                            <FileText size={16} />
-                            Eksportēt PDF
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                            type="button"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-                </div>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">Aktivitāšu atskaites</h2>
+                            <p className="text-gray-600 mt-1">Žurnāla analīzes</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={exportToCSV}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                type="button"
+                            >
+                                <Download size={16} />
+                                Eksportēt CSV
+                            </button>
+                            <button
+                                onClick={exportToPDF}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                type="button"
+                            >
+                                <FileText size={16} />
+                                Eksportēt PDF
+                            </button>
+                        </div>
+                    </DialogTitle>
+                </DialogHeader>
 
-                <div className="p-6">
+                <div className="p-2">
                     {/* Filters */}
                     <div className="bg-gray-50 rounded-lg p-6 mb-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Filter size={20} />
                             <h3 className="text-lg font-semibold">Filtri</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                            <div>
+                        <div className="flex flex-wrap gap-4 items-end">
+                            <div className="flex-1 min-w-[160px]">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sākuma datums</label>
                                 <input
                                     type="date"
@@ -310,7 +345,7 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <div>
+                            <div className="flex-1 min-w-[160px]">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Beigu datums</label>
                                 <input
                                     type="date"
@@ -319,35 +354,27 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <div>
+                            <div className="flex-1 min-w-[120px]">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sākuma laiks</label>
                                 <input
                                     type="time"
+                                    step="60"
                                     value={filters.startTime}
                                     onChange={(e) => handleFilterChange('startTime', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <div>
+                            <div className="flex-1 min-w-[120px]">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Beigu laiks</label>
                                 <input
                                     type="time"
+                                    step="60"
                                     value={filters.endTime}
                                     onChange={(e) => handleFilterChange('endTime', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Vārds vai e-pasts</label>
-                                <input
-                                    type="text"
-                                    value={filters.query}
-                                    onChange={(e) => handleFilterChange('query', e.target.value)}
-                                    placeholder="Meklēt pēc vārda vai e-pasta"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div>
+                            <div className="flex-1 min-w-[140px]">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Darbība</label>
                                 <select
                                     value={filters.action}
@@ -355,19 +382,15 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">Visas darbības</option>
-                                    <option value="login">Pieteikšanās</option>
-                                    <option value="logout">Atteikšanās</option>
                                     <option value="entry">Ieeja</option>
                                     <option value="exit">Izeja</option>
-                                    <option value="profile_update">Profila atjaunošana</option>
-                                    <option value="user_created">Lietotājs izveidots</option>
                                 </select>
                             </div>
-                            <div className="flex items-end">
+                            <div className="flex-shrink-0">
                                 <button
                                     onClick={applyFilters}
                                     disabled={loading}
-                                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                     type="button"
                                 >
                                     {loading ? (
@@ -381,58 +404,32 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
                         </div>
                     </div>
 
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                        <div className="bg-white rounded-lg shadow-sm p-6 border">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
-                                    <p className="text-2xl font-bold text-gray-900">{(logs || []).length}</p>
-                                </div>
-                                <FileText className="h-8 w-8 text-blue-600" />
+                    {/* Total Records Summary */}
+                    <div className="bg-white rounded-lg shadow-sm p-6 border mb-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
+                                <p className="text-2xl font-bold text-gray-900">{(logs || []).length}</p>
                             </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm p-6 border">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Unikāli skolēni</p>
-                                    <p className="text-2xl font-bold text-gray-900">{getUniqueStudentsCount()}</p>
-                                </div>
-                                <Users className="h-8 w-8 text-green-600" />
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm p-6 border">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Šodienas iejas</p>
-                                    <p className="text-2xl font-bold text-gray-900">{getTodaysEntries()}</p>
-                                </div>
-                                <Clock className="h-8 w-8 text-purple-600" />
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm p-6 border">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Darbību veidi</p>
-                                    <p className="text-2xl font-bold text-gray-900">{reportData.actionStats.length}</p>
-                                </div>
-                                <BarChart3 className="h-8 w-8 text-orange-600" />
-                            </div>
+                            <FileText className="h-8 w-8 text-blue-600" />
                         </div>
                     </div>
-                    <div className="p-6">
-                        <div>
-                            <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes laika skala</h4>
-                            <div className="space-y-4">
-                                {reportData.timeline.map((log: LogEntry) => (
+
+                    {/* Timeline */}
+                    <div>
+                        <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes</h4>
+                        <div className="space-y-4">
+                            {reportData.timeline.map((log: LogEntry) => {
+                                const { date, time } = formatDateTime(log.time || '');
+                                return (
                                     <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
                                         <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-sm font-medium text-gray-900">
-                                                    {log.student?.name || 'Nezināms skolēns'} - {log.action || 'Nezināma darbība'}
+                                                    {log.student?.name || 'Nezināms skolēns'} - {log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'Nezināma darbība'}
                                                 </p>
-                                                <p className="text-xs text-gray-500">{log.time}</p>
+                                                <p className="text-xs text-gray-500">{date} {time}</p>
                                             </div>
                                             {log.description && (
                                                 <p className="text-sm text-gray-600 mt-1">{log.description}</p>
@@ -442,15 +439,14 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
                                             </p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 };
 
 export default ReportModal;
-

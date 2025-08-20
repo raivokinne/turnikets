@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Search, Edit, Trash2, Mail, Calendar, User, Activity } from 'lucide-react';
+import { UserPlus, Search, Edit, Trash2, Mail, Calendar, User, Activity, GraduationCap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { usersApi } from "@/api/users.ts";
 import { logsApi } from "@/api/logs.ts";
 import { UserType, CreateUserData, UpdateUserData} from "@/types/users.ts";
 import { LogEntry } from "@/types/logs.ts";
+import AddStudentForm from './AddStudentForm';
 
 interface UserSearchParams {
     page: number;
@@ -125,6 +126,7 @@ const EmployeeManagement: React.FC = () => {
     const [totalPages, setTotalPages] = useState<number>(1);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+    const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState<boolean>(false);
     const [editingUser, setEditingUser] = useState<UserType | null>(null);
     const [selectedRole, setSelectedRole] = useState<'admin' | 'employee' | ''>('');
 
@@ -264,26 +266,35 @@ const EmployeeManagement: React.FC = () => {
         <div className="space-y-6 p-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Darbinieku pārvaldība</h1>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Pievienot darbinieku
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Pievienot jaunu darbinieku</DialogTitle>
-                        </DialogHeader>
-                        <UserForm
-                            isEdit={false}
-                            formData={formData}
-                            setFormData={setFormData}
-                            onSubmit={handleCreateUser}
-                            onCancel={() => setIsCreateDialogOpen(false)}
-                        />
-                    </DialogContent>
-                </Dialog>
+                <div className="flex gap-2">
+                    <Button 
+                        onClick={() => setIsAddStudentDialogOpen(true)}
+                        variant="outline"
+                    >
+                        <GraduationCap className="mr-2 h-4 w-4" />
+                        Pievienot skolēnu
+                    </Button>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Pievienot darbinieku
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Pievienot jaunu darbinieku</DialogTitle>
+                            </DialogHeader>
+                            <UserForm
+                                isEdit={false}
+                                formData={formData}
+                                setFormData={setFormData}
+                                onSubmit={handleCreateUser}
+                                onCancel={() => setIsCreateDialogOpen(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             <Tabs defaultValue="users" className="w-full">
@@ -525,6 +536,24 @@ const EmployeeManagement: React.FC = () => {
                         onSubmit={handleEditUser}
                         onCancel={() => setIsEditDialogOpen(false)}
                     />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Pievienot skolēnus</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-2">
+                        <AddStudentForm
+                            onClose={() => setIsAddStudentDialogOpen(false)}
+                            onSubmit={() => {
+                                setIsAddStudentDialogOpen(false);
+                                // Optionally refresh logs after student is added
+                                fetchLogs();
+                            }}
+                        />
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
