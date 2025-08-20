@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Log;
 use App\Services\NotificationService;
+use Illuminate\Http\Client\Response;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
-class GateController extends Controller {
-    public function RequestCardEvent(Request $request): void {
+class GateController extends Controller
+{
+    public function RequestCardEvent(Request $request): void
+    {
         error_log("Request Card event");
         $card = $request->all()['Card'];
         error_log($card);
@@ -28,27 +32,23 @@ class GateController extends Controller {
                 ->orderBy('time', 'desc')
                 ->first();
 
-            // Determine intended action based on reader direction
-            // reader == 1 => exiting, reader == 0 => entering
             $intendedAction = $reader == 1 ? 'exit' : 'entry';
 
-            // If last action equals intended action, this is a consecutive same action -> send warning and do NOT open the gate
             if ($lastLog && $lastLog->action === $intendedAction) {
                 $notifier->checkConsecutiveAction($student, $intendedAction);
                 return;
             }
 
-            // Otherwise proceed: create log, open gate, and send normal notification
             if ($intendedAction === 'exit') {
                 Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'exit',
-                    'description' => $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'),
+                    'description' => $student->name.' izgāja āra '.now()->format('Y-m-d H:i:s'),
                 ]);
                 $student->status = 'prombūtnē';
                 $student->save();
-                Http::get('http://' . $ip . '/cdor.cgi', [
+                Http::get('http://'.$ip.'/cdor.cgi', [
                     'open' => 1,
                     'door' => $reader,
                 ]);
@@ -57,11 +57,11 @@ class GateController extends Controller {
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'entry',
-                    'description' => $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'),
+                    'description' => $student->name.' ienāca iekšā '.now()->format('Y-m-d H:i:s'),
                 ]);
                 $student->status = 'klātbūtnē';
                 $student->save();
-                Http::get('http://' . $ip . '/cdor.cgi', [
+                Http::get('http://'.$ip.'/cdor.cgi', [
                     'open' => 1,
                     'door' => $reader,
                 ]);
@@ -70,46 +70,52 @@ class GateController extends Controller {
             $notifier->sendEntryExitNotification($student, $intendedAction, $intendedAction === 'exit'
                 ? $student->name . ' izgāja āra '
                 : $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'));
+
         }
     }
 
-    private static array $gateStates = [
-        1 => false,
-        2 => false,
-    ];
-
-    private function getGateIp(int $number): string {
-        return match ($number) {
+    private function getGateIp(int $number): string
+    {
+        return match($number) {
             1 => env('GATE_1_IP', '192.168.8.1'),
             2 => env('GATE_2_IP', '192.168.8.2'),
             default => throw new InvalidArgumentException("Invalid gate number: {$number}")
         };
     }
 
-    public function OpenGate(int $number): \Illuminate\Http\JsonResponse {
+    private function getCurrentGateState(int $gateNumber): bool
+    {
+        return Cache::get("gate_{$gateNumber}_state", false);
+    }
+
+    private function setGateState(int $gateNumber, bool $state): void
+    {
+        Cache::put("gate_{$gateNumber}_state", $state, now()->addDays(1));
+    }
+
+    public function OpenGate(int $number): \Illuminate\Http\JsonResponse
+    {
         try {
             $ip = $this->getGateIp($number);
 
-            // Open the gate
             Http::get("http://{$ip}/cdor.cgi", [
-                'open' => 1,
-                'door' => 1,
+                'open' => 10,
             ]);
 
-            // Wait 5 seconds
             sleep(5);
 
-            // Close the gate
             Http::get("http://{$ip}/cdor.cgi", [
-                'open' => 0,
-                'door' => 1,
+                'open' => 11,
             ]);
+
+            $this->setGateState($number, false);
 
             return response()->json([
                 'success' => true,
                 'message' => "Gate {$number} opened for 5 seconds and closed",
                 'gateNumber' => $number
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -119,7 +125,8 @@ class GateController extends Controller {
         }
     }
 
-    public function ToggleGate(int $number): \Illuminate\Http\JsonResponse {
+    public function ToggleGate(int $number): \Illuminate\Http\JsonResponse
+    {
         try {
             if (!in_array($number, [1, 2])) {
                 return response()->json(['error' => 'Invalid gate number'], 400);
@@ -127,23 +134,25 @@ class GateController extends Controller {
 
             $ip = $this->getGateIp($number);
 
-            // Toggle the state
-            $oldState = self::$gateStates[$number];
-            self::$gateStates[$number] = !self::$gateStates[$number];
+            $currentState = $this->getCurrentGateState($number);
+            $newState = !$currentState;
 
-            // Send command based on new state
+            $command = $newState ? 10 : 11;
+
             Http::get("http://{$ip}/cdor.cgi", [
-                'open' => self::$gateStates[$number] ? 1 : 0,
-                'door' => 1,
+                'open' => $command,
             ]);
+
+            $this->setGateState($number, $newState);
 
             return response()->json([
                 'success' => true,
-                'message' => "Gate {$number} toggled from " . ($oldState ? 'open' : 'closed') . ' to ' . (self::$gateStates[$number] ? 'open' : 'closed'),
+                'message' => "Gate {$number} toggled from " . ($currentState ? 'open' : 'closed') . ' to ' . ($newState ? 'open' : 'closed'),
                 'gateNumber' => $number,
-                'isOpen' => self::$gateStates[$number],
-                'previousState' => $oldState
+                'isOpen' => $newState,
+                'previousState' => $currentState
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -153,30 +162,58 @@ class GateController extends Controller {
         }
     }
 
-    // API method to get current gate state (returns JSON)
-    public function getGateState(int $number): \Illuminate\Http\JsonResponse {
+    public function getGateState(int $number): \Illuminate\Http\JsonResponse
+    {
         if (!in_array($number, [1, 2])) {
             return response()->json(['error' => 'Invalid gate number'], 400);
         }
 
+        $isOpen = $this->getCurrentGateState($number);
+
         return response()->json([
-            'gateNumber' => $number,
-            'isOpen' => self::$gateStates[$number] ?? false,
-            'status' => self::$gateStates[$number] ? 'open' : 'closed'
+            'success' => true,
+            'data' => [
+                'gateNumber' => $number,
+                'isOpen' => $isOpen,
+                'status' => $isOpen ? 'open' : 'closed'
+            ]
         ]);
     }
 
-    // Helper method to get all gate states
-    public function getAllGateStates(): array {
-        return self::$gateStates;
+    public function getAllGateStates(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                1 => $this->getCurrentGateState(1),
+                2 => $this->getCurrentGateState(2),
+            ]
+        ]);
     }
 
-    // Optional: Method to manually set gate state (useful for initialization)
-    public function setGateState(int $number, bool $isOpen): void {
-        if (!in_array($number, [1, 2])) {
-            throw new InvalidArgumentException("Invalid gate number: {$number}");
-        }
+    public function setGateStateManual(int $number, Request $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            if (!in_array($number, [1, 2])) {
+                return response()->json(['error' => 'Invalid gate number'], 400);
+            }
 
-        self::$gateStates[$number] = $isOpen;
+            $isOpen = $request->boolean('isOpen', false);
+            $this->setGateState($number, $isOpen);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Gate {$number} state manually set to " . ($isOpen ? 'open' : 'closed'),
+                'gateNumber' => $number,
+                'isOpen' => $isOpen
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Failed to set gate {$number} state: " . $e->getMessage(),
+                'gateNumber' => $number
+            ], 500);
+        }
     }
 }
