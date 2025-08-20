@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { User, QrCode, BookPlus, X, Calendar, Download, FileText, Users, Clock, Filter, BarChart3, Search } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
+import React, { useEffect, useState, useCallback } from 'react';
+import { X, Download, FileText, Users, Clock, Filter, BarChart3, Search } from 'lucide-react';
 import { LogEntry } from '@/types/logs';
 import { useLogs } from '@/hooks/useLogs';
 
@@ -33,18 +32,6 @@ interface ReportData {
     timeline: LogEntry[];
 }
 
-interface StudentActivity {
-    [studentName: string]: number;
-}
-
-interface HourlyActivity {
-    [hour: number]: number;
-}
-
-type TabType = 'overview' | 'attendance' | 'analytics' | 'timeline';
-
-const COLORS: string[] = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
 const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { logs, getLogsByDateRange } = useLogs();
 
@@ -66,10 +53,9 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     });
 
     const [loading, setLoading] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     // Build report from given logs (or from hook logs if not provided)
-    const buildReportFromLogs = (logsToUse?: LogEntry[]) => {
+    const buildReportFromLogs = useCallback((logsToUse?: LogEntry[]) => {
         const sourceLogs = logsToUse || logs;
         if (!sourceLogs || !sourceLogs.length) {
             setReportData({ attendance: [], actionStats: [], classStats: [], timeline: [] });
@@ -131,12 +117,12 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             classStats: Object.entries(classStats).map(([name, value]) => ({ name, value })),
             timeline: sourceLogs.slice(0, 10)
         });
-    };
+    }, [logs]);
 
     // run when hook logs change
     useEffect(() => {
         buildReportFromLogs();
-    }, [logs]);
+    }, [logs, buildReportFromLogs]);
 
     const handleFilterChange = (key: keyof FilterState, value: string): void => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -269,47 +255,6 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => `
         return (logs || []).filter((l: LogEntry) =>
             l.action === 'entry' && (l.time || '').startsWith(today)
         ).length;
-    };
-
-    const getMostActiveStudents = (): [string, number][] => {
-        const studentActivity = (logs || []).reduce<StudentActivity>((acc, log) => {
-            const name = log.student?.name || 'Nezināms';
-            acc[name] = (acc[name] || 0) + 1;
-            return acc;
-        }, {});
-
-        return Object.entries(studentActivity)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5);
-    };
-
-    const getPeakActivityHours = (): [string, number][] => {
-        const hourlyActivity = (logs || []).reduce<HourlyActivity>((acc, log) => {
-            const hour = new Date(log.time).getHours();
-            acc[hour] = (acc[hour] || 0) + 1;
-            return acc;
-        }, {});
-
-        return Object.entries(hourlyActivity)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
-            .map(([hour, count]) => [`${hour}:00 - ${hour}:59`, count]);
-    };
-
-    const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white p-3 border border-gray-300 rounded shadow">
-                    <p className="font-semibold">{`${label}`}</p>
-                    {payload.map((entry: any, index: number) => (
-                        <p key={index} style={{ color: entry.color }}>
-                            {`${entry.dataKey}: ${entry.value}`}
-                        </p>
-                    ))}
-                </div>
-            );
-        }
-        return null;
     };
 
     return (

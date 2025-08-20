@@ -3,13 +3,16 @@ import { Student } from './students';
 export interface LogEntry {
     id: number;
     time: string;
-    student_id: number|null;
-    user_id: number|null;
-    action?: string;
-    description?: string;
-    created_at: string;
-    updated_at: string;
-    student?: Student;
+    student?: {
+        name: string;
+        class?: string;
+    } | null;
+    action?: string | null;
+    description?: string | null;
+    performed_by_user?: {
+        name: string;
+        role?: 'admin' | 'employee';
+    } | null;
 }
 
 export interface LogWithStudent extends LogEntry {
@@ -31,38 +34,38 @@ export interface LogStudentInfo {
     student: Student;
 }
 
-interface FilterState {
-  startDate: string;
-  endDate: string;
-  studentId: string;
-  action: string;
-  class: string;
+export interface FilterState {
+    startDate: string;
+    endDate: string;
+    studentId: string;
+    action: string;
+    class: string;
 }
 
-interface AttendanceData {
-  date: string;
-  entries: number;
-  exits: number;
+export interface AttendanceData {
+    date: string;
+    entries: number;
+    exits: number;
 }
 
-interface StatData {
-  name: string;
-  value: number;
+export interface StatData {
+    name: string;
+    value: number;
 }
 
-interface ReportData {
-  attendance: AttendanceData[];
-  actionStats: StatData[];
-  classStats: StatData[];
-  timeline: LogEntry[];
+export interface ReportData {
+    attendance: AttendanceData[];
+    actionStats: StatData[];
+    classStats: StatData[];
+    timeline: LogEntry[];
 }
 
-interface StudentActivity {
-  [studentName: string]: number;
+export interface StudentActivity {
+    [studentName: string]: number;
 }
 
-interface HourlyActivity {
-  [hour: number]: number;
+export interface HourlyActivity {
+    [hour: number]: number;
 }
 
-type TabType = 'overview' | 'attendance' | 'analytics' | 'timeline';
+export type TabType = 'overview' | 'attendance' | 'analytics' | 'timeline';

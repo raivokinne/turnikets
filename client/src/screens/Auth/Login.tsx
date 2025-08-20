@@ -38,7 +38,7 @@ export default function LoginPage() {
     try {
       await login(data);
       navigate("/dashboard");
-    } catch (err) {
+    } catch {
       setError('Failed to login. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);

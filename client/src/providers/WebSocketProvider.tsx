@@ -23,8 +23,15 @@ export function WebSocketProvider({ children }: Props) {
         // Subscribe to general notifications channel
         const channel = pusher.subscribe('notifications');
 
-        // Consecutive action warning with custom styling
-        channel.bind('consecutive-action', (data: any) => {
+        interface ConsecutiveActionData {
+            student?: {
+                name: string;
+            };
+            action?: string;
+            timestamp?: number;
+        }
+
+        channel.bind('consecutive-action', (data: ConsecutiveActionData) => {
             const name = data?.student?.name ?? 'Lietotājs';
             const action = data?.action ?? '';
 
@@ -64,8 +71,16 @@ export function WebSocketProvider({ children }: Props) {
             );
         });
 
-        // Optional: normal entry/exit notification (keep original styling)
-        channel.bind('entry-exit', (data: any) => {
+        interface EntryExitData {
+            student?: {
+                name: string;
+            };
+            action?: string;
+            description?: string;
+            timestamp?: number;
+        }
+
+        channel.bind('entry-exit', (data: EntryExitData) => {
             const name = data?.student?.name ?? 'User';
             const action = data?.action ?? '';
             toast(`${name} ${action === 'exit' ? 'exited' : 'entered'}`, {

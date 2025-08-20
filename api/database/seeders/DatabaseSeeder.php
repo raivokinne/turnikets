@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('employee123'),
             'role' => 'employee'
         ]);
-
+        /*
         Student::factory()->create([
             'name' => 'Emils',
             'email' => 'ipa22.e.petersons@vtdt.edu.lv',
@@ -56,6 +56,6 @@ class DatabaseSeeder extends Seeder
         Student::factory(7)->create();
 
         Log::factory(30)->create();
-
+        */
     }
 }
