@@ -204,10 +204,24 @@ def upload_excel():
 
         # Send to backend
         try:
-            payload = {"data": result["data"], "total_records": result["total_records"]}
-            logger.info(
-                "Sūtu %d ierakstus uz backend %s", result["total_records"], BACKEND_URL
-            )
+            payload = {
+                "data": result["data"], 
+                "total_records": result["total_records"]
+            }
+
+            # Add employee_id if provided
+            employee_id = request.form.get('employee_id')
+            if employee_id:
+                payload["employee_id"] = employee_id
+                logger.info(
+                    "Sūtu %d ierakstus uz backend %s ar darbinieku ID: %s", 
+                    result["total_records"], BACKEND_URL, employee_id
+                )
+            else:
+                logger.info(
+                    "Sūtu %d ierakstus uz backend %s", result["total_records"], BACKEND_URL
+                )
+
             response = requests.post(BACKEND_URL, json=payload, timeout=10)
         except requests.RequestException as e:
             logger.exception("Neizdevās izveidot savienojumu ar backend")

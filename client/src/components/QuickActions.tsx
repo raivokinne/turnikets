@@ -6,6 +6,7 @@ import { Student } from '@/types/students';
 import { studentsApi } from "@/api/students";
 import { gatesApi } from "@/api/gates";
 import ReportModal from './ReportModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const QuickActions: React.FC = () => {
     const [showAddStudent, setShowAddStudent] = useState(false);
@@ -203,18 +204,24 @@ const QuickActions: React.FC = () => {
                 </div>
             </div>
 
-            {showReport && (
-                <ReportModal
-                    onClose={onClose}
-                />
-            )}
+            <ReportModal
+                isOpen={showReport}
+                onClose={onClose}
+            />
 
-            {showAddStudent && (
-                <AddStudentForm
-                    onClose={() => setShowAddStudent(false)}
-                    onSubmit={handleAddStudent}
-                />
-            )}
+            <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Pievienot skolēnus</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-2">
+                        <AddStudentForm
+                            onClose={() => setShowAddStudent(false)}
+                            onSubmit={handleAddStudent}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {showSendQRCode && (
                 <SendQRCodeModal

@@ -362,12 +362,22 @@ class StudentController extends Controller {
                 $createdStudents[] = $student;
             }
 
+            // Use provided employee_id or fall back to authenticated user
+            $employeeId = $request->input('employee_id') ?? Auth::id();
+            $employeeName = 'system';
+
+            if ($employeeId && $employeeId == Auth::id()) {
+                $employeeName = Auth::user()->name ?? 'system';
+            } elseif ($employeeId) {
+                $employee = \App\Models\User::find($employeeId);
+                $employeeName = $employee ? $employee->name : "Employee ID: $employeeId";
+            }
+
             Log::create([
                 'student_id'  => null,
-                'user_id'     => Auth::id(),
+                'user_id'     => $employeeId,
                 'action'      => 'mass_student_upload',
-                'description' => 'Mass student upload by ' . (Auth::user()->name ?? 'system') .
-                    '. Created: ' . count($createdStudents) .
+                'description' => '. Created: ' . count($createdStudents) .
                     ', Errors: ' . count($errors) .
                     ', Total processed: ' . count($data),
                 'time' => now(),

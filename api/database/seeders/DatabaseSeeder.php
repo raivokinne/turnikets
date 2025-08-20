@@ -31,31 +31,9 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('employee123'),
             'role' => 'employee'
         ]);
-        /*
-        Student::factory()->create([
-            'name' => 'Emils',
-            'email' => 'ipa22.e.petersons@vtdt.edu.lv',
-            'class' => 'IPa22',
-            'uuid' => Str::uuid()->toString(),
-        ]);
 
-        Student::factory()->create([
-            'name' => 'Raivo',
-            'email' => 'ipa22.r.kinne@vtdt.edu.lv',
-            'class' => 'IPa22',
-            'uuid' => Str::uuid()->toString(),
-        ]);
+        Student::factory(500)->create();
 
-        Student::factory()->create([
-            'name' => 'Kevins',
-            'email' => 'ipa22.k.kanalis@vtdt.edu.lv',
-            'class' => 'IPa22',
-            'uuid' => Str::uuid()->toString(),
-        ]);
-
-        Student::factory(7)->create();
-
-        Log::factory(30)->create();
-        */
+        Log::factory(1000)->create();
     }
 }

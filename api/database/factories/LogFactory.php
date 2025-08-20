@@ -19,101 +19,29 @@ class LogFactory extends Factory
     public function definition(): array
     {
         $action = $this->faker->randomElement([
-            'entry', 'exit', 'login', 'logout', 'profile_update',
-            'user_created', 'student_created', 'student_updated',
-            'student_deleted', 'mass_student_upload', 'email_send_failed'
+            'entry', 'exit'
         ]);
 
         $student = null;
         $user = null;
         $description = '';
+        $time = $this->faker->dateTimeBetween('-1 year', 'now');
 
         switch ($action) {
             case 'entry':
+                $student = Student::inRandomOrder()->first();
+                $description = $student->name . ' ienāca iekšā ' . $time->format('Y-m-d H:i:s');
+                break;
             case 'exit':
                 $student = Student::inRandomOrder()->first();
-                $description = $this->faker->randomElement([
-                    "Student scanned QR code for {$action}",
-                    "Automatic {$action} logged via access system",
-                    "Manual {$action} recorded"
-                ]);
+                $description = $student->name . ' izgāja āra ' . $time->format('Y-m-d H:i:s');
                 break;
-
-            case 'login':
-            case 'logout':
-                $user = User::inRandomOrder()->first();
-                $description = $this->faker->randomElement([
-                    "User {$action} from web interface",
-                    "User {$action} from mobile app",
-                    "Automatic {$action} due to session timeout"
-                ]);
-                break;
-
-            case 'profile_update':
-                $user = User::inRandomOrder()->first();
-                $changes = $this->faker->randomElements([
-                    'name', 'email', 'phone', 'address', 'preferences'
-                ], $this->faker->numberBetween(1, 3));
-                $description = "User profile updated. Changes: " . implode(', ', $changes);
-                break;
-
-            case 'user_created':
-                $user = User::inRandomOrder()->first();
-                $newUserName = $this->faker->name();
-                $description = "User '{$newUserName}' created by " . ($user ? $user->name : 'System');
-                break;
-
-            case 'student_created':
-                $student = Student::inRandomOrder()->first();
-                $user = User::inRandomOrder()->first();
-                $description = "Student '{$student->name}' created by " . ($user ? $user->name : 'System');
-                break;
-
-            case 'student_updated':
-                $student = Student::inRandomOrder()->first();
-                $user = User::inRandomOrder()->first();
-                $changes = $this->faker->randomElements([
-                    "status from 'prombutnē' to 'klātbutne'",
-                    "class from '10A' to '10B'",
-                    "email from 'old@email.com' to 'new@email.com'",
-                    "name from 'Old Name' to 'New Name'"
-                ], $this->faker->numberBetween(1, 2));
-                $description = "Student '{$student->name}' updated by " . ($user ? $user->name : 'System') . ". Changes: " . implode(', ', $changes);
-                break;
-
-            case 'student_deleted':
-                $student = Student::inRandomOrder()->first();
-                $user = User::inRandomOrder()->first();
-                $description = "Student '{$student->name}' deleted by " . ($user ? $user->name : 'System');
-                break;
-
-            case 'mass_student_upload':
-                $user = User::inRandomOrder()->first();
-                $created = $this->faker->numberBetween(15, 50);
-                $errors = $this->faker->numberBetween(0, 5);
-                $total = $created + $errors;
-                $description = "Mass student upload by " . ($user ? $user->name : 'System') . ". Created: {$created}, Errors: {$errors}, Total processed: {$total}";
-                // For mass upload, student_id should be null as it's a general operation
-                $student = null;
-                break;
-
-            case 'email_send_failed':
-                $student = Student::inRandomOrder()->first();
-                $user = User::inRandomOrder()->first();
-                $description = $this->faker->randomElement([
-                    "Failed to send QR code email to student",
-                    "Email delivery failed - invalid email address",
-                    "SMTP error during email sending",
-                    "Email service temporarily unavailable"
-                ]);
-                break;
-
             default:
                 $description = $this->faker->sentence();
         }
 
         return [
-            'time' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'time' => $time,
             'student_id' => $student ? $student->id : null,
             'user_id' => $user ? $user->id : null,
             'action' => $action,

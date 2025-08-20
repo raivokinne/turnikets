@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Student } from "@/types/students";
 import { studentsApi } from "@/api/students";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface AddStudentFormProps {
     onClose: () => void;
@@ -59,6 +60,7 @@ type StudentFormValues = z.infer<typeof studentSchema>;
 type ExcelUploadFormValues = z.infer<typeof excelUploadSchema>;
 
 const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) => {
+    const { user } = useAuth();
     const queryClient = useQueryClient();
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'single' | 'excel'>('single');
@@ -100,6 +102,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
         mutationFn: async (file: File): Promise<UploadResponse> => {
             const formData = new FormData();
             formData.append('file', file);
+            if (user?.id) {
+                formData.append('employee_id', user.id);
+            }
 
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -203,24 +208,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
     const selectedFile = excelForm.watch("file")?.[0];
     const isLoading = createStudentMutation.isPending || uploadExcelMutation.isPending;
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-lg font-semibold text-gray-900">
-                            Pievienot skolēnus
-                        </h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            disabled={isLoading}
-                        >
-                            <X className="h-6 w-6" />
-                        </button>
-                    </div>
-
-                    {/* Tab Navigation */}
+    const formContent = (
+        <div className="space-y-4">
+            {/* Tab Navigation */}
                     <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
                         <button
                             type="button"
@@ -472,8 +462,12 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
                             </div>
                         </form>
                     )}
-                </div>
-            </div>
+        </div>
+    );
+
+    return (
+        <div className="w-full">
+            {formContent}
         </div>
     );
 };
