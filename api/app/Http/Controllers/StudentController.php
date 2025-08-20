@@ -13,10 +13,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-class StudentController extends Controller
-{
-    public function index(): JsonResponse
-    {
+class StudentController extends Controller {
+    public function index(): JsonResponse {
         $students = Student::all();
 
         return response()->json([
@@ -28,11 +26,10 @@ class StudentController extends Controller
     /**
      * Create new student
      */
-    public function store(Request $request): JsonResponse
-    {
+    public function store(Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'class' => 'required|string|max:255',
-            'status' => 'required|in:klātbutne,prombutnē,neviens',
+            'status' => 'required|in:klātbūtnē,prombūtnē,neviens',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
         ]);
@@ -57,7 +54,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_created',
-                'description' => "Student '{$student->name}' created by ".Auth::user()->name,
+                'description' => "Student '{$student->name}' created by " . Auth::user()->name,
                 'time' => now(),
             ]);
 
@@ -66,7 +63,6 @@ class StudentController extends Controller
                 'message' => 'Student created successfully',
                 'data' => $student,
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -79,8 +75,7 @@ class StudentController extends Controller
     /**
      * Update student
      */
-    public function update(Request $request): JsonResponse
-    {
+    public function update(Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:students,id',
             'class' => 'sometimes|string|max:255',
@@ -146,7 +141,7 @@ class StudentController extends Controller
                     'student_id' => $student->id,
                     'user_id' => Auth::id(),
                     'action' => 'student_updated',
-                    'description' => "Student '{$student->name}' updated by ".Auth::user()->name.'. Changes: '.implode(', ', $changes),
+                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . '. Changes: ' . implode(', ', $changes),
                     'time' => now(),
                 ]);
             }
@@ -158,7 +153,6 @@ class StudentController extends Controller
                 'message' => 'Student updated successfully',
                 'data' => $student->fresh()->load('user'),
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -171,8 +165,7 @@ class StudentController extends Controller
     /**
      * Delete student
      */
-    public function destroy(Request $request): JsonResponse
-    {
+    public function destroy(Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:students,id',
         ]);
@@ -203,7 +196,7 @@ class StudentController extends Controller
                 'student_id' => $studentId,
                 'user_id' => Auth::id(),
                 'action' => 'student_deleted',
-                'description' => "Student '{$studentName}' deleted by ".Auth::user()->name,
+                'description' => "Student '{$studentName}' deleted by " . Auth::user()->name,
                 'time' => now(),
             ]);
 
@@ -213,7 +206,6 @@ class StudentController extends Controller
                 'status' => 200,
                 'message' => 'Student deleted successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -226,8 +218,7 @@ class StudentController extends Controller
     /**
      * Update student status
      */
-    public function updateStatus(Request $request): JsonResponse
-    {
+    public function updateStatus(Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:students,id',
             'status' => 'required|in:klātbutne,prombutnē',
@@ -258,7 +249,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_updated',
-                'description' => "Student '{$student->name}' status updated by ".Auth::user()->name." from '{$oldStatus}' to '{$request->status}'",
+                'description' => "Student '{$student->name}' status updated by " . Auth::user()->name . " from '{$oldStatus}' to '{$request->status}'",
                 'time' => now(),
             ]);
 
@@ -267,7 +258,6 @@ class StudentController extends Controller
                 'message' => 'Student status updated successfully',
                 'data' => $student->fresh()->load('user'),
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -312,7 +302,7 @@ class StudentController extends Controller
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
                 'action' => 'student_updated',
-                'description' => "Student '{$student->name}' email updated by ".Auth::user()->name." from '{$oldData->email}', '{$oldData->name}', '{$oldData->class}' to '{$request->email}', '{$request->name}', '{$request->class}'",
+                'description' => "Student '{$student->name}' updated by ".Auth::user()->name." from '{$oldData->email}', '{$oldData->name}', '{$oldData->class}' to '{$request->email}', '{$request->name}', '{$request->class}'",
                 'time' => now(),
             ]);
 
@@ -323,7 +313,6 @@ class StudentController extends Controller
                 'message' => 'Student updated successfully',
                 'data' => $student,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -333,8 +322,7 @@ class StudentController extends Controller
         }
     }
 
-    public function massUpdate(Request $request): JsonResponse
-    {
+    public function massUpdate(Request $request): JsonResponse {
         try {
             if (! $request->has('data') || ! is_array($request->input('data'))) {
                 return response()->json([
@@ -346,59 +334,66 @@ class StudentController extends Controller
 
             $data = $request->input('data');
             $createdStudents = [];
+            $errors = [];
 
             foreach ($data as $index => $studentData) {
                 $insertData = [
                     'status' => 'prombūtnē',
-                    'name' => trim($studentData['name']),
-                    'email' => trim($studentData['email']),
-                    'class' => trim($studentData['grupa']),
-                    'uuid' => Str::uuid()->toString(),
-                    'time' => now(),
+                    'name'   => trim($studentData['name'] ?? ''),
+                    'email'  => trim($studentData['email'] ?? ''),
+                    'class'  => trim($studentData['group'] ?? ''),
+                    'uuid'   => Str::uuid()->toString(),
+                    'time'   => now(),
                 ];
 
-                $exists = Student::query()->where('email', $insertData['email'])->get();
+                if ($insertData['email'] === '') {
+                    $errors[] = "Row $index: Missing email";
+                    continue;
+                }
+
+                $exists = Student::query()->where('email', $insertData['email'])->first();
+
                 if ($exists) {
-                    return response()->json([
-                        'status' => 409,
-                        'message' => 'Student with this email already exists',
-                    ], 409);
+                    $errors[] = "Row $index: Student with email {$insertData['email']} already exists";
+                    continue;
                 }
 
                 $student = Student::query()->create($insertData);
-
                 $createdStudents[] = $student;
             }
 
             Log::create([
-                'student_id' => null,
-                'user_id' => Auth::id(),
-                'action' => 'mass_student_upload',
-                'description' => 'Mass student upload by '.Auth::user()->name.'. Created: '.count($createdStudents).', Errors: '.count($errors).', Total processed: '.count($data),
+                'student_id'  => null,
+                'user_id'     => Auth::id(),
+                'action'      => 'mass_student_upload',
+                'description' => 'Mass student upload by ' . (Auth::user()->name ?? 'system') .
+                    '. Created: ' . count($createdStudents) .
+                    ', Errors: ' . count($errors) .
+                    ', Total processed: ' . count($data),
                 'time' => now(),
             ]);
 
             return response()->json([
-                'status' => 200,
-                'message' => count($createdStudents).' students uploaded successfully',
+                'status'  => 200,
+                'message' => count($createdStudents) . ' students uploaded successfully',
+                'errors'  => $errors,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 500,
+                'status'  => 500,
                 'message' => 'Failed to retrieve students',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
 
-    private function sendEmail(Student $student): void
-    {
+
+    private function sendEmail(Student $student): void {
         try {
             $accessCredential = AccessCredential::create([
                 'email' => $student->email,
                 'student_id' => $student->id,
-                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.urlencode(base64_encode('474554202F63646F722E6367693F6F70656E3D3126646F6F723D3020485454502F312E310D0A486F73743A203139322E3136382E31332E3233350D0A417574686F72697A6174696F6E3A2042617369632059574E7430566D6C75364F4467344F4467344F4467340D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A')).'&margin=30',
+                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode(base64_encode('474554202F63646F722E6367693F6F70656E3D3126646F6F723D3020485454502F312E310D0A486F73743A203139322E3136382E31332E3233350D0A417574686F72697A6174696F6E3A2042617369632059574E7430566D6C75364F4467344F4467344F4467340D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A')) . '&margin=30',
                 'uuid' => $student->uuid,
             ]);
 

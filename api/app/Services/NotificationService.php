@@ -54,7 +54,7 @@ class NotificationService
     /**
      * Send WebSocket notification for consecutive action warning
      */
-    private function sendConsecutiveActionWarning(Student $student, string $action): void
+    public function sendConsecutiveActionWarning(Student $student, string $action): void
     {
         $message = [
             'type' => 'consecutive_action_warning',
@@ -70,10 +70,10 @@ class NotificationService
         try {
             // Send to general notifications channel
             $this->pusher->trigger('notifications', 'consecutive-action', $message);
-            
+
             // Send to student-specific channel
             $this->pusher->trigger("student.{$student->id}", 'consecutive-action', $message);
-            
+
             LaravelLog::info('Consecutive action warning sent', $message);
         } catch (\Exception $e) {
             LaravelLog::error('Failed to send WebSocket notification: ' . $e->getMessage());

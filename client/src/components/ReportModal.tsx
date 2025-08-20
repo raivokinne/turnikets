@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { User, QrCode, BookPlus, X, Calendar, Download, FileText, Users, Clock, Filter, BarChart3, Search } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie } from 'recharts';
+import React, { useEffect, useState, useCallback } from 'react';
+import { X, Download, FileText, Users, Clock, Filter, BarChart3, Search } from 'lucide-react';
 import { LogEntry } from '@/types/logs';
 import { useLogs } from '@/hooks/useLogs';
 
@@ -8,7 +7,9 @@ import { useLogs } from '@/hooks/useLogs';
 interface FilterState {
     startDate: string;
     endDate: string;
-    studentId: string;
+    startTime: string; // intraday start time (HH:MM)
+    endTime: string;   // intraday end time (HH:MM)
+    query: string;     // new: search by name or email
     action: string;
     class: string;
 }
@@ -31,25 +32,15 @@ interface ReportData {
     timeline: LogEntry[];
 }
 
-interface StudentActivity {
-    [studentName: string]: number;
-}
-
-interface HourlyActivity {
-    [hour: number]: number;
-}
-
-type TabType = 'overview' | 'attendance' | 'analytics' | 'timeline';
-
-const COLORS: string[] = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
 const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const { logs, getLogsByDateRange, getLogsByStudent } = useLogs();
+    const { logs, getLogsByDateRange } = useLogs();
 
     const [filters, setFilters] = useState<FilterState>({
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
-        studentId: '',
+        startTime: '00:00',
+        endTime: '23:59',
+        query: '',
         action: '',
         class: ''
     });
@@ -62,14 +53,14 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     });
 
     const [loading, setLoading] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-    useEffect(() => {
-        generateReport();
-    }, [logs]);
-
-    const generateReport = (): void => {
-        if (!logs.length) return;
+    // Build report from given logs (or from hook logs if not provided)
+    const buildReportFromLogs = useCallback((logsToUse?: LogEntry[]) => {
+        const sourceLogs = logsToUse || logs;
+        if (!sourceLogs || !sourceLogs.length) {
+            setReportData({ attendance: [], actionStats: [], classStats: [], timeline: [] });
+            return;
+        }
 
         // Process attendance data
         interface AttendanceAccumulator {
@@ -80,10 +71,11 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             };
         }
 
-        const attendanceByDate = logs
+        const attendanceByDate = sourceLogs
             .filter((log: LogEntry) => ['entry', 'exit'].includes(log.action || ''))
             .reduce<AttendanceAccumulator>((acc, log) => {
-                const date = log.time.split(' ')[0];
+                // assume log.time is like 'YYYY-MM-DD HH:MM:SS' or ISO string
+                const date = (log.time || '').split(' ')[0];
                 if (!acc[date]) acc[date] = { date, entries: 0, exits: 0 };
                 if (log.action === 'entry') {
                     acc[date].entries++;
@@ -98,7 +90,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             [action: string]: number;
         }
 
-        const actionStats = logs.reduce<ActionAccumulator>((acc, log) => {
+        const actionStats = sourceLogs.reduce<ActionAccumulator>((acc, log) => {
             const action = log.action || 'unknown';
             if (!acc[action]) acc[action] = 0;
             acc[action]++;
@@ -110,7 +102,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             [className: string]: number;
         }
 
-        const classStats = logs
+        const classStats = sourceLogs
             .filter((log: LogEntry) => log.student?.class)
             .reduce<ClassAccumulator>((acc, log) => {
                 const className = log.student!.class;
@@ -123,9 +115,14 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             attendance: Object.values(attendanceByDate),
             actionStats: Object.entries(actionStats).map(([name, value]) => ({ name, value })),
             classStats: Object.entries(classStats).map(([name, value]) => ({ name, value })),
-            timeline: logs.slice(0, 10)
+            timeline: sourceLogs.slice(0, 10)
         });
-    };
+    }, [logs]);
+
+    // run when hook logs change
+    useEffect(() => {
+        buildReportFromLogs();
+    }, [logs, buildReportFromLogs]);
 
     const handleFilterChange = (key: keyof FilterState, value: string): void => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -134,11 +131,40 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const applyFilters = async (): Promise<void> => {
         setLoading(true);
         try {
-            if (filters.startDate && filters.endDate) {
-                await getLogsByDateRange(filters.startDate, filters.endDate);
-            } else if (filters.studentId) {
-                await getLogsByStudent(parseInt(filters.studentId));
+            // Build start and end datetimes in format YYYY-MM-DD HH:MM:SS
+            const startDateTime = `${filters.startDate} ${filters.startTime}:00`;
+            const endDateTime = `${filters.endDate} ${filters.endTime}:59`;
+
+            // fetch logs from hook (assumes getLogsByDateRange will update hook's logs)
+            await getLogsByDateRange(startDateTime, endDateTime);
+
+            // After fetching we also apply frontend filters (query, action & class) to the current logs
+            // Note: this relies on the hook updating `logs`. If your hook returns the fetched
+            // logs directly, you can use that instead.
+            let filteredLogs = (logs || []).slice();
+
+            // Filter by query (name or email) if provided
+            if (filters.query && filters.query.trim() !== '') {
+                const q = filters.query.trim().toLowerCase();
+                filteredLogs = filteredLogs.filter(l => {
+                    const name = (l.student?.name || '').toString().toLowerCase();
+                    const email = (l.student?.email || '').toString().toLowerCase();
+                    return name.includes(q) || email.includes(q);
+                });
             }
+
+            // Filter by action (if selected)
+            if (filters.action) {
+                filteredLogs = filteredLogs.filter(l => l.action === filters.action);
+            }
+
+            // Filter by class (if selected)
+            if (filters.class) {
+                filteredLogs = filteredLogs.filter(l => l.student?.class === filters.class);
+            }
+
+            // Build report using the filtered set
+            buildReportFromLogs(filteredLogs);
         } catch (error) {
             console.error('Error applying filters:', error);
         } finally {
@@ -147,19 +173,20 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     const exportToCSV = (): void => {
-        const headers: string[] = ['Date', 'Time', 'Student ID', 'Student Name', 'Action', 'Class', 'Description'];
+        const headers: string[] = ['Date', 'Time', 'Student ID', 'Student Name', 'Student Email', 'Action', 'Class', 'Description'];
         const csvData = [
             headers.join(','),
-            ...logs.map((log: LogEntry) => [
-                log.time.split(' ')[0],
-                log.time.split(' ')[1] || '',
-                log.student_id.toString(),
+            ...(logs || []).map((log: LogEntry) => [
+                (log.time || '').split(' ')[0],
+                (log.time || '').split(' ')[1] || '',
+                (log.student_id || '').toString(),
                 log.student?.name || 'N/A',
+                log.student?.email || 'N/A',
                 log.action || 'N/A',
                 log.student?.class || 'N/A',
                 log.description || ''
             ].map((field: string) => `"${field}"`).join(','))
-        ].join('\n');
+        ].join('');
 
         const blob = new Blob([csvData], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -175,68 +202,44 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         if (!printWindow) return;
 
         const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Aktivitāšu atskaite</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-            .summary-card { padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-            th { background-color: #f5f5f5; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Aktivitāšu žurnāla atskaite</h1>
-            <p>Periods: ${filters.startDate} līdz ${filters.endDate}</p>
-            <p>Izveidots: ${new Date().toLocaleString('lv-LV')}</p>
-          </div>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Aktivitāšu atskaite</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+.header { text-align: center; margin-bottom: 30px; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.summary-card { padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+th { background-color: #f5f5f5; }
+</style>
+</head>
+<body>
 
-          <div class="summary">
-            <div class="summary-card">
-              <h3>Kopā ierakstu</h3>
-              <p style="font-size: 24px; margin: 0;">${logs.length}</p>
-            </div>
-            <div class="summary-card">
-              <h3>Unikāli skolēni</h3>
-              <p style="font-size: 24px; margin: 0;">${new Set(logs.map((l: LogEntry) => l.student_id)).size}</p>
-            </div>
-            <div class="summary-card">
-              <h3>Darbību veidi</h3>
-              <p style="font-size: 24px; margin: 0;">${reportData.actionStats.length}</p>
-            </div>
-          </div>
-
-          <h2>Pēdējās aktivitātes</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Datums un laiks</th>
-                <th>Skolēns</th>
-                <th>Darbība</th>
-                <th>Klase</th>
-                <th>Apraksts</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${logs.slice(0, 20).map((log: LogEntry) => `
-                <tr>
-                  <td>${log.time}</td>
-                  <td>${log.student?.name || 'N/A'}</td>
-                  <td>${log.action || 'N/A'}</td>
-                  <td>${log.student?.class || 'N/A'}</td>
-                  <td>${log.description || ''}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
+<h2>aktivitātes</h2>
+<table>
+<thead>
+<tr>
+<th>Datums un laiks</th>
+<th>Skolēns</th>
+<th>Darbība</th>
+</tr>
+</thead>
+<tbody>
+${(logs || []).slice(0, 20).map((log: LogEntry) => `
+<tr>
+<td>${log.time}</td>
+<td>${log.student?.name || 'N/A'}</td>
+<td>${log.action || 'N/A'}</td>
+</tr>
+`).join('')}
+</tbody>
+</table>
+</body>
+</html>
+`;
 
         printWindow.document.write(printContent);
         printWindow.document.close();
@@ -244,55 +247,14 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     const getUniqueStudentsCount = (): number => {
-        return new Set(logs.map((l: LogEntry) => l.student_id)).size;
+        return new Set((logs || []).map((l: LogEntry) => l.student_id)).size;
     };
 
     const getTodaysEntries = (): number => {
         const today = new Date().toISOString().split('T')[0];
-        return logs.filter((l: LogEntry) =>
-            l.action === 'entry' && l.time.startsWith(today)
+        return (logs || []).filter((l: LogEntry) =>
+            l.action === 'entry' && (l.time || '').startsWith(today)
         ).length;
-    };
-
-    const getMostActiveStudents = (): [string, number][] => {
-        const studentActivity = logs.reduce<StudentActivity>((acc, log) => {
-            const name = log.student?.name || 'Nezināms';
-            acc[name] = (acc[name] || 0) + 1;
-            return acc;
-        }, {});
-
-        return Object.entries(studentActivity)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5);
-    };
-
-    const getPeakActivityHours = (): [string, number][] => {
-        const hourlyActivity = logs.reduce<HourlyActivity>((acc, log) => {
-            const hour = new Date(log.time).getHours();
-            acc[hour] = (acc[hour] || 0) + 1;
-            return acc;
-        }, {});
-
-        return Object.entries(hourlyActivity)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
-            .map(([hour, count]) => [`${hour}:00 - ${hour}:59`, count]);
-    };
-
-    const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white p-3 border border-gray-300 rounded shadow">
-                    <p className="font-semibold">{`${label}`}</p>
-                    {payload.map((entry: any, index: number) => (
-                        <p key={index} style={{ color: entry.color }}>
-                            {`${entry.dataKey}: ${entry.value}`}
-                        </p>
-                    ))}
-                </div>
-            );
-        }
-        return null;
     };
 
     return (
@@ -338,7 +300,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             <Filter size={20} />
                             <h3 className="text-lg font-semibold">Filtri</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sākuma datums</label>
                                 <input
@@ -358,12 +320,30 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Skolēna ID</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Sākuma laiks</label>
                                 <input
-                                    type="number"
-                                    value={filters.studentId}
-                                    onChange={(e) => handleFilterChange('studentId', e.target.value)}
-                                    placeholder="Ievadiet skolēna ID"
+                                    type="time"
+                                    value={filters.startTime}
+                                    onChange={(e) => handleFilterChange('startTime', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Beigu laiks</label>
+                                <input
+                                    type="time"
+                                    value={filters.endTime}
+                                    onChange={(e) => handleFilterChange('endTime', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Vārds vai e-pasts</label>
+                                <input
+                                    type="text"
+                                    value={filters.query}
+                                    onChange={(e) => handleFilterChange('query', e.target.value)}
+                                    placeholder="Meklēt pēc vārda vai e-pasta"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
@@ -407,7 +387,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
-                                    <p className="text-2xl font-bold text-gray-900">{logs.length}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{(logs || []).length}</p>
                                 </div>
                                 <FileText className="h-8 w-8 text-blue-600" />
                             </div>
@@ -440,144 +420,30 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             </div>
                         </div>
                     </div>
-
-                    {/* Tabs */}
-                    <div className="bg-white rounded-lg shadow-sm border">
-                        <div className="border-b border-gray-200">
-                            <nav className="-mb-px flex space-x-8 px-6">
-                                {([
-                                    { key: 'overview', label: 'Pārskats' },
-                                    { key: 'attendance', label: 'Apmeklētība' },
-                                    { key: 'analytics', label: 'Analītika' },
-                                    { key: 'timeline', label: 'Laika skala' }
-                                ] as { key: TabType; label: string }[]).map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setActiveTab(tab.key)}
-                                        className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
-                                            ? 'border-blue-500 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                            }`}
-                                        type="button"
-                                    >
-                                        {tab.label}
-                                    </button>
+                    <div className="p-6">
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes laika skala</h4>
+                            <div className="space-y-4">
+                                {reportData.timeline.map((log: LogEntry) => (
+                                    <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                                        <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {log.student?.name || 'Nezināms skolēns'} - {log.action || 'Nezināma darbība'}
+                                                </p>
+                                                <p className="text-xs text-gray-500">{log.time}</p>
+                                            </div>
+                                            {log.description && (
+                                                <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                                            )}
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Klase: {log.student?.class || 'N/A'} | ID: {log.student_id}
+                                            </p>
+                                        </div>
+                                    </div>
                                 ))}
-                            </nav>
-                        </div>
-
-                        <div className="p-6">
-                            {activeTab === 'overview' && (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div>
-                                        <h4 className="text-lg font-semibold mb-4">Darbību sadalījums</h4>
-                                        <ResponsiveContainer width="100%" height={300}>
-                                            <RechartsPieChart>
-                                                <Pie
-                                                    dataKey="value"
-                                                    data={reportData.actionStats}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    outerRadius={80}
-                                                    label={({ name, percent }: { name: string; percent: number }) =>
-                                                        `${name} ${(percent * 100).toFixed(0)}%`
-                                                    }
-                                                >
-                                                    {reportData.actionStats.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip />
-                                            </RechartsPieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-lg font-semibold mb-4">Klašu aktivitāte</h4>
-                                        <ResponsiveContainer width="100%" height={300}>
-                                            <BarChart data={reportData.classStats}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="name" />
-                                                <YAxis />
-                                                <Tooltip content={<CustomTooltip />} />
-                                                <Bar dataKey="value" fill="#8884d8" />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'attendance' && (
-                                <div>
-                                    <h4 className="text-lg font-semibold mb-4">Dienas apmeklētības tendences</h4>
-                                    <ResponsiveContainer width="100%" height={400}>
-                                        <BarChart data={reportData.attendance}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="date" />
-                                            <YAxis />
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Legend />
-                                            <Bar dataKey="entries" fill="#82ca9d" name="Iejas" />
-                                            <Bar dataKey="exits" fill="#8884d8" name="Izejas" />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-
-                            {activeTab === 'analytics' && (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h5 className="font-semibold mb-3">Aktīvākie skolēni</h5>
-                                            <div className="space-y-2">
-                                                {getMostActiveStudents().map(([name, count]) => (
-                                                    <div key={name} className="flex justify-between">
-                                                        <span className="text-sm">{name}</span>
-                                                        <span className="text-sm font-medium">{count} aktivitātes</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h5 className="font-semibold mb-3">Aktivitātes maksimuma stundas</h5>
-                                            <div className="space-y-2">
-                                                {getPeakActivityHours().map(([hour, count]) => (
-                                                    <div key={hour} className="flex justify-between">
-                                                        <span className="text-sm">{hour}</span>
-                                                        <span className="text-sm font-medium">{count} aktivitātes</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'timeline' && (
-                                <div>
-                                    <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes laika skala</h4>
-                                    <div className="space-y-4">
-                                        {reportData.timeline.map((log: LogEntry) => (
-                                            <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                                                <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {log.student?.name || 'Nezināms skolēns'} - {log.action || 'Nezināma darbība'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">{log.time}</p>
-                                                    </div>
-                                                    {log.description && (
-                                                        <p className="text-sm text-gray-600 mt-1">{log.description}</p>
-                                                    )}
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Klase: {log.student?.class || 'N/A'} | ID: {log.student_id}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -587,3 +453,4 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 export default ReportModal;
+

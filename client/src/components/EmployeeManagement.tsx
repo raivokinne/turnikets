@@ -13,6 +13,13 @@ import { logsApi } from "@/api/logs.ts";
 import { UserType, CreateUserData, UpdateUserData} from "@/types/users.ts";
 import { LogEntry } from "@/types/logs.ts";
 
+interface UserSearchParams {
+    page: number;
+    per_page: number;
+    role?: 'admin' | 'employee';
+    search?: string;
+}
+
 const UserForm: React.FC<{
     isEdit: boolean;
     formData: CreateUserData;
@@ -66,19 +73,6 @@ const UserForm: React.FC<{
                         <SelectItem value="admin">Administrators</SelectItem>
                     </SelectContent>
                 </Select>
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="class" className="text-right">
-                    Klase
-                </Label>
-                <Input
-                    id="class"
-                    value={formData.class}
-                    onChange={(e) => handleInputChange('class', e.target.value)}
-                    className="col-span-3"
-                    placeholder="Ievadiet klasi (neobligāti)"
-                />
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
@@ -152,7 +146,7 @@ const EmployeeManagement: React.FC = () => {
     const fetchUsers = async (): Promise<void> => {
         try {
             setLoading(true);
-            const params: any = {
+            const params: UserSearchParams = {
                 page: currentPage,
                 per_page: 10,
             };

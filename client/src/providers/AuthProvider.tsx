@@ -1,7 +1,6 @@
-import { createContext, JSX, useCallback, useContext, useState } from "react";
+import { JSX, useCallback, useState } from "react";
 import {
     User,
-    AuthContextValue,
     AuthCredentials,
     AuthResponse
 } from "@/types/auth";
@@ -15,17 +14,11 @@ import {
     UseMutationResult,
     UseQueryResult
 } from "@tanstack/react-query";
+import { AuthContext } from "@/contexts/AuthContext";
 
 type AuthProviderProps = {
     children: React.ReactNode;
 }
-
-const AuthContext = createContext<AuthContextValue>({
-    user: null,
-    authenticated: false,
-    login: async () => { /* Default implementation */ },
-    logout: async () => { /* Default implementation */ }
-});
 
 export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     const queryClient = useQueryClient();
@@ -120,5 +113,3 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
         </AuthContext.Provider>
     );
 }
-
-export const useAuth = (): AuthContextValue => useContext(AuthContext);
