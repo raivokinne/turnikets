@@ -6,9 +6,13 @@ from typing import Any, Dict, List, Optional
 import openpyxl
 import requests
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app, origins=['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'])
 
 # Configuration
 ALLOWED_EXTENSIONS = {"xlsx", "xls", "xlsm"}
@@ -79,7 +83,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
         normalized_headers = [_normalize_header_value(h) for h in headers]
         header_indices = {h: idx for idx, h in enumerate(normalized_headers) if h != ""}
 
-        required_headers = ["name", "grupa", "email"]
+        required_headers = ["name", "group", "email"]
         missing_headers = [h for h in required_headers if h not in header_indices]
 
         if missing_headers:
@@ -108,7 +112,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
 
             entry = {
                 "name": get_row_value(header_indices.get("name")),
-                "grupa": get_row_value(header_indices.get("grupa")),
+                "group": get_row_value(header_indices.get("group")),
                 "email": get_row_value(header_indices.get("email")),
             }
 
@@ -131,9 +135,13 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
         return {"error": f"Kļūda apstrādājot Excel failu: {str(e)}"}
 
 
-@app.route("/upload/excel", methods=["POST"])
+@app.route("/upload/excel", methods=["POST", "OPTIONS"])
 def upload_excel():
     """Handle Excel file upload and send processed data to another backend"""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+
     temp_path = None
     try:
         if "file" not in request.files:
@@ -175,7 +183,7 @@ def upload_excel():
         filename = secure_filename(file.filename)
         # Save to a temporary file
         with tempfile.NamedTemporaryFile(
-            delete=False, suffix=f"-{filename}"
+                delete=False, suffix=f"-{filename}"
         ) as tmp_file:
             temp_path = tmp_file.name
             file.save(temp_path)
@@ -224,7 +232,8 @@ def upload_excel():
                 jsonify(
                     {
                         "status": "success",
-                        "message": "Veiksmīgi apstrādāti dati un nosūtīti uz backend",
+                        "message": "Veiksmīgi apstrādāti dati un nosūtīti uz serveri",
+                        "total_records": result["total_records"],
                     }
                 ),
                 200,

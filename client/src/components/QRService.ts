@@ -38,7 +38,14 @@ export const QRService = {
         studentName: string,
         studentClass: string,
     ): string => {
-        return uuidv4();
+        const uuid = uuidv4();
+        return JSON.stringify({
+            id: studentId,
+            name: studentName,
+            class: studentClass,
+            uuid: uuid,
+            timestamp: new Date().toISOString()
+        });
     },
 
     sendEmail: async (params: SendEmailParams): Promise<boolean> => {

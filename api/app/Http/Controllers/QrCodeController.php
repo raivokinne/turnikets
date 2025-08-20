@@ -37,12 +37,22 @@ class QrCodeController extends Controller
         }
 
         try {
-            $accessCredential = AccessCredential::create([
-                'email' => $student->email,
-                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
-                'student_id' => $student->id,
-                'uuid' => $student->uuid,
-            ]);
+            // Check if credential already exists
+            $existingCredential = AccessCredential::where('student_id', $student->id)->first();
+            $isRegeneration = $existingCredential !== null;
+
+            // Use updateOrCreate to handle both new and existing credentials
+            $accessCredential = AccessCredential::updateOrCreate(
+                [
+                    'student_id' => $student->id, // Search by student_id
+                ],
+                [
+                    'email' => $student->email,
+                    'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$student->uuid.'&margin=30',
+                    'uuid' => $student->uuid,
+                    'updated_at' => now(),
+                ]
+            );
 
             $emailSent = false;
             $emailMessage = '';
@@ -55,14 +65,18 @@ class QrCodeController extends Controller
                 ));
 
                 $emailSent = true;
-                $emailMessage = 'QR code sent to email successfully';
+                $emailMessage = $isRegeneration
+                    ? 'QR code regenerated and sent to email successfully'
+                    : 'QR code sent to email successfully';
             } catch (\Exception $e) {
-                $emailMessage = 'QR code created but email failed to send: '.$e->getMessage();
+                $emailMessage = ($isRegeneration ? 'QR code regenerated' : 'QR code created') . ' but email failed to send: '.$e->getMessage();
             }
 
             return response()->json([
                 'status' => 201,
-                'message' => 'QR code credential created successfully',
+                'message' => $isRegeneration
+                    ? 'QR code credential regenerated successfully'
+                    : 'QR code credential created successfully',
                 'data' => [
                     'student_id' => $student->id,
                     'name' => $student->name,
@@ -71,13 +85,14 @@ class QrCodeController extends Controller
                     'qrcode_url' => $accessCredential->qrcode_url,
                     'email_sent' => $emailSent,
                     'email_message' => $emailMessage,
+                    'regenerated' => $isRegeneration,
                 ],
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => 'Failed to create QR code credential',
+                'message' => 'Failed to create/regenerate QR code credential',
                 'error' => $e->getMessage(),
             ], 500);
         }

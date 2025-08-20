@@ -336,7 +336,7 @@ class StudentController extends Controller {
                     'status' => 'prombūtnē',
                     'name'   => trim($studentData['name'] ?? ''),
                     'email'  => trim($studentData['email'] ?? ''),
-                    'class'  => trim($studentData['grupa'] ?? ''),
+                    'class'  => trim($studentData['group'] ?? ''),
                     'uuid'   => Str::uuid()->toString(),
                     'time'   => now(),
                 ];

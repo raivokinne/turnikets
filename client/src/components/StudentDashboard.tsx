@@ -29,7 +29,14 @@ const SimpleStudentDashboard: React.FC = () => {
                     .filter((log: LogEntry) => log.student)
                     .map((log: LogEntry) => ({
                         log,
-                        student: log.student!
+                        student: {
+                            id: 0, // Default value since it's not available in LogEntry.student
+                            name: log.student!.name,
+                            class: log.student!.class ?? '',
+                            status: '', // Default value since it's not available in LogEntry.student
+                            email: '', // Default value since it's not available in LogEntry.student
+                            time: log.time // Use the log time as student time
+                        } as Student
                     }));
 
                 setAttendanceData(students);

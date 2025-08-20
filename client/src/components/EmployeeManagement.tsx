@@ -13,6 +13,13 @@ import { logsApi } from "@/api/logs.ts";
 import { UserType, CreateUserData, UpdateUserData} from "@/types/users.ts";
 import { LogEntry } from "@/types/logs.ts";
 
+interface UserSearchParams {
+    page: number;
+    per_page: number;
+    role?: 'admin' | 'employee';
+    search?: string;
+}
+
 const UserForm: React.FC<{
     isEdit: boolean;
     formData: CreateUserData;
@@ -139,7 +146,7 @@ const EmployeeManagement: React.FC = () => {
     const fetchUsers = async (): Promise<void> => {
         try {
             setLoading(true);
-            const params: any = {
+            const params: UserSearchParams = {
                 page: currentPage,
                 per_page: 10,
             };

@@ -118,23 +118,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
     const [sendingStatus, setSendingStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'sent' | 'failed' }>({});
     const [showQRPreview, setShowQRPreview] = useState<{ student: Student, url: string } | null>(null);
 
-    // Memoize filtered students to prevent recalculation on every render
-    const filteredStudents = useMemo(() => {
-        if (!searchTerm.trim()) return students;
-
-        const searchLower = searchTerm.toLowerCase();
-        return students.filter(student =>
-            student.name.toLowerCase().includes(searchLower) ||
-            student.class.toLowerCase().includes(searchLower) ||
-            student.email.toLowerCase().includes(searchLower)
-        );
-    }, [searchTerm, students]);
-
-    // Memoize selected students array
-    const selectedStudents = useMemo(() => {
-        return filteredStudents.filter(student => selectedStudentIds.has(student.id));
-    }, [filteredStudents, selectedStudentIds]);
-
     // Debounced search to prevent excessive filtering
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
