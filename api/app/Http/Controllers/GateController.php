@@ -13,6 +13,30 @@ use InvalidArgumentException;
 
 class GateController extends Controller
 {
+    private const HEARTBEAT_TIMEOUT = 10;
+
+    public function RequestStatus(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $ip = $request->all()['IP'];
+
+        $gateNumber = $this->getGateNumberByIp($ip);
+
+        if ($gateNumber) {
+            Cache::put("gate_{$gateNumber}_heartbeat", now()->timestamp, now()->addMinutes(5));
+
+            return response()->json([
+                'success' => true,
+                'message' => "Heartbeat received for gate {$gateNumber}",
+                'timestamp' => now()->toISOString()
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Unknown gate IP'
+        ], 400);
+    }
+
     public function RequestCardEvent(Request $request): void
     {
         error_log("Request Card event");
@@ -83,6 +107,18 @@ class GateController extends Controller
         };
     }
 
+    private function getGateNumberByIp(string $ip): ?int
+    {
+        $gate1Ip = env('GATE_1_IP', '192.168.8.1');
+        $gate2Ip = env('GATE_2_IP', '192.168.8.2');
+
+        return match($ip) {
+            $gate1Ip => 1,
+            $gate2Ip => 2,
+            default => null
+        };
+    }
+
     private function getCurrentGateState(int $gateNumber): bool
     {
         return Cache::get("gate_{$gateNumber}_state", false);
@@ -93,22 +129,29 @@ class GateController extends Controller
         Cache::put("gate_{$gateNumber}_state", $state, now()->addDays(1));
     }
 
+    private function isGateOnline(int $gateNumber): bool
+    {
+        $lastHeartbeat = Cache::get("gate_{$gateNumber}_heartbeat");
+
+        if (!$lastHeartbeat) {
+            return false;
+        }
+
+        return (now()->timestamp - $lastHeartbeat) <= self::HEARTBEAT_TIMEOUT;
+    }
+
     public function OpenGate(int $number): \Illuminate\Http\JsonResponse
     {
         try {
             $ip = $this->getGateIp($number);
             $this->setGateState($number, true);
-            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => 10,
             ]);
-            */
             sleep(5);
-            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => 11,
             ]);
-            */
             $this->setGateState($number, false);
 
             return response()->json([
@@ -139,11 +182,9 @@ class GateController extends Controller
             $newState = !$currentState;
 
             $command = $newState ? 10 : 11;
-            /*
             Http::get("http://{$ip}/cdor.cgi", [
                 'open' => $command,
             ]);
-            */
             $this->setGateState($number, $newState);
 
             return response()->json([
@@ -170,13 +211,16 @@ class GateController extends Controller
         }
 
         $isOpen = $this->getCurrentGateState($number);
+        $isOnline = $this->isGateOnline($number);
 
         return response()->json([
             'success' => true,
             'data' => [
                 'gateNumber' => $number,
                 'isOpen' => $isOpen,
-                'status' => $isOpen ? 'open' : 'closed'
+                'isOnline' => $isOnline,
+                'status' => $isOpen ? 'open' : 'closed',
+                'connectionStatus' => $isOnline ? 'online' : 'offline'
             ]
         ]);
     }
@@ -186,8 +230,14 @@ class GateController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                1 => $this->getCurrentGateState(1),
-                2 => $this->getCurrentGateState(2),
+                1 => [
+                    'isOpen' => $this->getCurrentGateState(1),
+                    'isOnline' => $this->isGateOnline(1)
+                ],
+                2 => [
+                    'isOpen' => $this->getCurrentGateState(2),
+                    'isOnline' => $this->isGateOnline(2)
+                ]
             ]
         ]);
     }
