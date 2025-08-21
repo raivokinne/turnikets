@@ -74,8 +74,8 @@ const StudentHeader: React.FC<SimpleHeaderProps> = ({
                             onChange={(e) => setSelectedStatus(e.target.value)}
                         >
                             <option value="">Viss</option>
-                            <option value="prombutnē">Prombutnē</option>
-                            <option value="klātbutne">Klātbutne</option>
+                            <option value="prombūtnē">Prombūtnē</option>
+                            <option value="klātbūtnē">Klātbūtnē</option>
                         </select>
                     </div>
                 </div>
