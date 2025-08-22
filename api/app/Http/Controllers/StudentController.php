@@ -141,7 +141,7 @@ class StudentController extends Controller {
                     'student_id' => $student->id,
                     'user_id' => Auth::id(),
                     'action' => 'student_updated',
-                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . '. Changes: ' . implode(', ', $changes),
+                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . 'Changes: ' . implode(', ', $changes),
                     'time' => now(),
                 ]);
             }

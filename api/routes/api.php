@@ -78,5 +78,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('open/{number}', [GateController::class, 'OpenGate']);
         Route::post('toggle/{number}', [GateController::class, 'ToggleGate']);
         Route::get('state/{number}', [GateController::class, 'getGateState']);
+        Route::get('states', [GateController::class, 'getAllGateStates']);
     });
 });

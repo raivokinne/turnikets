@@ -58,7 +58,60 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         timeline: []
     });
 
+    const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+
+    // Apply frontend filters to logs
+    const applyFrontendFilters = useCallback((logsToFilter: LogEntry[]) => {
+        let filtered = [...logsToFilter];
+
+        // Filter by time range if specified
+        if (filters.startTime !== '00:00' || filters.endTime !== '23:59') {
+            filtered = filtered.filter(l => {
+                if (!l.time) return false;
+
+                try {
+                    // Parse ISO date string and convert to local time
+                    const logDate = new Date(l.time);
+                    const logTime = logDate.toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }); // Format: "HH:MM"
+
+                    const logTimeMinutes = parseInt(logTime.split(':')[0]) * 60 + parseInt(logTime.split(':')[1]);
+                    const startTimeMinutes = parseInt(filters.startTime.split(':')[0]) * 60 + parseInt(filters.startTime.split(':')[1]);
+                    const endTimeMinutes = parseInt(filters.endTime.split(':')[0]) * 60 + parseInt(filters.endTime.split(':')[1]);
+
+                    return logTimeMinutes >= startTimeMinutes && logTimeMinutes <= endTimeMinutes;
+                } catch (error) {
+                    return false;
+                }
+            });
+        }
+
+        // Filter by query (name or email) if provided
+        if (filters.query && filters.query.trim() !== '') {
+            const q = filters.query.trim().toLowerCase();
+            filtered = filtered.filter(l => {
+                const name = (l.student?.name || '').toString().toLowerCase();
+                const email = (l.student?.email || '').toString().toLowerCase();
+                return name.includes(q) || email.includes(q);
+            });
+        }
+
+        // Filter by action (if selected)
+        if (filters.action) {
+            filtered = filtered.filter(l => l.action === filters.action);
+        }
+
+        // Filter by class (if selected)
+        if (filters.class) {
+            filtered = filtered.filter(l => l.student?.class === filters.class);
+        }
+
+        return filtered;
+    }, [filters.startTime, filters.endTime, filters.query, filters.action, filters.class]);
 
     // Build report from given logs (or from hook logs if not provided)
     const buildReportFromLogs = useCallback((logsToUse?: LogEntry[]) => {
@@ -125,10 +178,17 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         });
     }, [logs]);
 
-    // run when hook logs change
+    // Apply filters whenever logs or filter criteria change
     useEffect(() => {
-        buildReportFromLogs();
-    }, [logs, buildReportFromLogs]);
+        if (logs && logs.length > 0) {
+            const filtered = applyFrontendFilters(logs);
+            setFilteredLogs(filtered);
+            buildReportFromLogs(filtered);
+        } else {
+            setFilteredLogs([]);
+            buildReportFromLogs([]);
+        }
+    }, [logs, applyFrontendFilters, buildReportFromLogs]);
 
     const handleFilterChange = (key: keyof FilterState, value: string): void => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -137,60 +197,9 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
     const applyFilters = async (): Promise<void> => {
         setLoading(true);
         try {
-            // Send just the date portions to match Laravel validation (Y-m-d format)
-            // The time filtering will be handled on the frontend after fetching
+            // Fetch logs by date range first
             await getLogsByDateRange(filters.startDate, filters.endDate);
-
-            // After fetching, apply all frontend filters including time range
-            let filteredLogs = (logs || []).slice();
-
-            // Filter by time range if specified
-            if (filters.startTime !== '00:00' || filters.endTime !== '23:59') {
-                filteredLogs = filteredLogs.filter(l => {
-                    if (!l.time) return false;
-
-                    try {
-                        // Parse ISO date string and convert to local time
-                        const logDate = new Date(l.time);
-                        const logTime = logDate.toLocaleTimeString('en-GB', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false
-                        }); // Format: "HH:MM"
-
-                        const logTimeMinutes = parseInt(logTime.split(':')[0]) * 60 + parseInt(logTime.split(':')[1]);
-                        const startTimeMinutes = parseInt(filters.startTime.split(':')[0]) * 60 + parseInt(filters.startTime.split(':')[1]);
-                        const endTimeMinutes = parseInt(filters.endTime.split(':')[0]) * 60 + parseInt(filters.endTime.split(':')[1]);
-
-                        return logTimeMinutes >= startTimeMinutes && logTimeMinutes <= endTimeMinutes;
-                    } catch (error) {
-                        return false;
-                    }
-                });
-            }
-
-            // Filter by query (name or email) if provided
-            if (filters.query && filters.query.trim() !== '') {
-                const q = filters.query.trim().toLowerCase();
-                filteredLogs = filteredLogs.filter(l => {
-                    const name = (l.student?.name || '').toString().toLowerCase();
-                    const email = (l.student?.email || '').toString().toLowerCase();
-                    return name.includes(q) || email.includes(q);
-                });
-            }
-
-            // Filter by action (if selected)
-            if (filters.action) {
-                filteredLogs = filteredLogs.filter(l => l.action === filters.action);
-            }
-
-            // Filter by class (if selected)
-            if (filters.class) {
-                filteredLogs = filteredLogs.filter(l => l.student?.class === filters.class);
-            }
-
-            // Build report using the filtered set
-            buildReportFromLogs(filteredLogs);
+            // The useEffect will automatically apply frontend filters when logs update
         } catch (error) {
             console.error('Error applying filters:', error);
         } finally {
@@ -219,7 +228,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         const headers: string[] = ['Date', 'Time', 'Student ID', 'Student Name', 'Student Email', 'Action', 'Class', 'Description'];
         const csvData = [
             headers.join(','),
-            ...(logs || []).map((log: LogEntry) => {
+            ...filteredLogs.map((log: LogEntry) => {
                 const { date, time } = formatDateTime(log.time || '');
                 return [
                     date,
@@ -275,7 +284,7 @@ th { background-color: #f5f5f5; }
 </tr>
 </thead>
 <tbody>
-${(logs || []).slice(0, 20).map((log: LogEntry) => {
+${filteredLogs.slice(0, 20).map((log: LogEntry) => {
             const { date, time } = formatDateTime(log.time || '');
             return `
 <tr>
@@ -296,7 +305,6 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => {
         printWindow.document.close();
         printWindow.print();
     };
-
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -386,6 +394,16 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => {
                                     <option value="exit">Izeja</option>
                                 </select>
                             </div>
+                            <div className="flex-1 min-w-[200px]">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Meklēt skolēnu</label>
+                                <input
+                                    type="text"
+                                    placeholder="Vārds vai e-pasts..."
+                                    value={filters.query}
+                                    onChange={(e) => handleFilterChange('query', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                             <div className="flex-shrink-0">
                                 <button
                                     onClick={applyFilters}
@@ -409,7 +427,8 @@ ${(logs || []).slice(0, 20).map((log: LogEntry) => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
-                                <p className="text-2xl font-bold text-gray-900">{(logs || []).length}</p>
+                                <p className="text-2xl font-bold text-gray-900">{filteredLogs.length}</p>
+                                <p className="text-xs text-gray-500 mt-1">No {(logs || []).length} kopējiem ierakstiem</p>
                             </div>
                             <FileText className="h-8 w-8 text-blue-600" />
                         </div>

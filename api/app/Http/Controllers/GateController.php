@@ -15,7 +15,7 @@ class GateController extends Controller
 {
     private const HEARTBEAT_TIMEOUT = 10;
 
-    public function RequestStatus(Request $request): \Illuminate\Http\JsonResponse
+    public function RequestStatus(Request $request): void
     {
         $ip = $request->all()['IP'];
 
@@ -23,18 +23,7 @@ class GateController extends Controller
 
         if ($gateNumber) {
             Cache::put("gate_{$gateNumber}_heartbeat", now()->timestamp, now()->addMinutes(5));
-
-            return response()->json([
-                'success' => true,
-                'message' => "Heartbeat received for gate {$gateNumber}",
-                'timestamp' => now()->toISOString()
-            ]);
         }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Unknown gate IP'
-        ], 400);
     }
 
     public function RequestCardEvent(Request $request): void
@@ -228,16 +217,13 @@ class GateController extends Controller
     public function getAllGateStates(): \Illuminate\Http\JsonResponse
     {
         return response()->json([
-            'success' => true,
-            'data' => [
-                1 => [
-                    'isOpen' => $this->getCurrentGateState(1),
-                    'isOnline' => $this->isGateOnline(1)
-                ],
-                2 => [
-                    'isOpen' => $this->getCurrentGateState(2),
-                    'isOnline' => $this->isGateOnline(2)
-                ]
+            1 => [
+                'isOpen' => $this->getCurrentGateState(1),
+                'isOnline' => $this->isGateOnline(1)
+            ],
+            2 => [
+                'isOpen' => $this->getCurrentGateState(2),
+                'isOnline' => $this->isGateOnline(2)
             ]
         ]);
     }

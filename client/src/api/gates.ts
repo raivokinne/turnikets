@@ -1,5 +1,10 @@
 import { api } from '@/utils/api';
 
+interface GateState {
+    isOpen: boolean;
+    isOnline: boolean;
+}
+
 export const gatesApi = {
     async openGate(gateNumber: number): Promise<void> {
         const response = await api.post(`/gate/open/${gateNumber}`);
@@ -17,13 +22,24 @@ export const gatesApi = {
         }
     },
 
-    async getGateState(gateNumber: number): Promise<boolean> {
+    async getGateState(gateNumber: number): Promise<GateState> {
         const response = await api.get(`/gate/state/${gateNumber}`);
-        return response.data?.data?.isOpen || false;
+        const data = response.data?.data;
+
+        return {
+            isOpen: data?.isOpen || false,
+            isOnline: data?.isOnline || false
+        };
     },
 
-    async getAllGateStates(): Promise<{ [key: number]: boolean }> {
+    async getAllGateStates(): Promise<{ [key: number]: GateState }> {
         try {
+            const response = await api.get('/gate/states');
+
+            if (response.data?.data) {
+                return response.data.data;
+            }
+
             const [gate1State, gate2State] = await Promise.all([
                 this.getGateState(1),
                 this.getGateState(2)
@@ -35,7 +51,10 @@ export const gatesApi = {
             };
         } catch (error) {
             console.error('Failed to fetch gate states:', error);
-            return { 1: false, 2: false };
+            return {
+                1: { isOpen: false, isOnline: false },
+                2: { isOpen: false, isOnline: false }
+            };
         }
     }
 };

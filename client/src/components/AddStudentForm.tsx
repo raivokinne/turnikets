@@ -109,7 +109,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
 
-                xhr.open('POST', 'http://localhost:5000/upload/excel', true);
+                xhr.open('POST', `${import.meta.env.VITE_PYTHON_URL}/upload/excel`, true);
 
                 xhr.onload = function() {
                     try {

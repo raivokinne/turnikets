@@ -53,7 +53,13 @@ const QuickActions: React.FC = () => {
 
     const fetchGateStates = async () => {
         try {
-            const states = await gatesApi.getAllGateStates();
+            const response = await gatesApi.getAllGateStates();
+            console.log('API Response:', response); // Debug log
+
+            // Extract data from the response if it's nested
+            const states = response.data || response;
+            console.log('Gate states:', states); // Debug log
+
             setGateStates(states);
         } catch (error) {
             console.error('Failed to fetch gate states:', error);
