@@ -7,6 +7,7 @@ import { studentsApi } from "@/api/students";
 import { gatesApi } from "@/api/gates";
 import ReportModal from './ReportModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
 
 interface GateState {
     isOpen: boolean;
@@ -17,25 +18,19 @@ const QuickActions: React.FC = () => {
     const [showAddStudent, setShowAddStudent] = useState(false);
     const [showSendQRCode, setShowSendQRCode] = useState(false);
     const [showReport, setShowReport] = useState(false);
-    const [students, setStudents] = useState<Student[]>([]);
     const [gateStates, setGateStates] = useState<{ [key: number]: GateState }>({
         1: { isOpen: false, isOnline: false },
         2: { isOpen: false, isOnline: false }
     });
     const [isLoadingGates, setIsLoadingGates] = useState(false);
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                const resp = await studentsApi.getAll();
-                setStudents(resp);
-            } catch (error) {
-                console.error('Failed to fetch attendance data:', error);
-                setStudents([]);
-            }
-        }
-        fetchData();
-    }, []);
+    // Use React Query for students data to stay in sync
+    const { data: students = [], isLoading: studentsLoading } = useQuery({
+        queryKey: ['students'],
+        queryFn: studentsApi.getAll,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        refetchOnWindowFocus: false,
+    });
 
     // Fetch gate states on mount
     useEffect(() => {
@@ -54,12 +49,7 @@ const QuickActions: React.FC = () => {
     const fetchGateStates = async () => {
         try {
             const response = await gatesApi.getAllGateStates();
-            console.log('API Response:', response); // Debug log
-
-            // Extract data from the response if it's nested
             const states = response.data || response;
-            console.log('Gate states:', states); // Debug log
-
             setGateStates(states);
         } catch (error) {
             console.error('Failed to fetch gate states:', error);
@@ -71,17 +61,8 @@ const QuickActions: React.FC = () => {
     };
 
     const handleAddStudent = (student: Student) => {
-        const newStudent = {
-            id: Math.random(),
-            name: student.name,
-            class: student.class,
-            email: student.email,
-            time: student.time,
-            status: student.status
-        };
-
-        setStudents([...students, newStudent]);
-        console.log('New student added:', newStudent);
+        // No need to manually update state since React Query will handle it
+        console.log('New student added:', student);
     };
 
     const handleSendQRCodes = () => {
@@ -173,6 +154,7 @@ const QuickActions: React.FC = () => {
                     <button
                         className="w-full flex items-center justify-start p-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-lg font-medium transition-colors border border-gray-300"
                         onClick={handleSendQRCodes}
+                        disabled={studentsLoading || students.length === 0}
                     >
                         <QrCode className="mr-3 h-6 w-6" />
                         Nosūtīt QR kodus pa e-pastu

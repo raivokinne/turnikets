@@ -35,20 +35,7 @@ export const gatesApi = {
     async getAllGateStates(): Promise<{ [key: number]: GateState }> {
         try {
             const response = await api.get('/gate/states');
-
-            if (response.data?.data) {
-                return response.data.data;
-            }
-
-            const [gate1State, gate2State] = await Promise.all([
-                this.getGateState(1),
-                this.getGateState(2)
-            ]);
-
-            return {
-                1: gate1State,
-                2: gate2State
-            };
+            return response.data;
         } catch (error) {
             console.error('Failed to fetch gate states:', error);
             return {

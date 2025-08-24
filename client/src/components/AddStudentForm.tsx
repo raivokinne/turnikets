@@ -26,8 +26,6 @@ const studentSchema = z.object({
     name: z.string().min(1, { message: "Vārds un uzvārds ir obligāts" }),
     class: z.string().min(1, { message: "Klase ir obligāta" }),
     email: z.string().email({ message: "Lūdzu ievadiet derīgu e-pasta adresi" }),
-    status: z.string().optional(),
-    time: z.string().optional(),
 });
 
 const excelUploadSchema = z.object({
@@ -72,8 +70,6 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             name: "",
             class: "",
             email: "",
-            status: "active",
-            time: new Date().toISOString(),
         },
     });
 
@@ -171,8 +167,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             name: data.name,
             email: data.email,
             class: data.class,
-            status: data.status || "klātbutne",
-            time: data.time || new Date().toISOString(),
+            status: "neviens", // Auto-set default status to "neviens" (Gaida)
+            time: new Date().toISOString(),
         };
 
         createStudentMutation.mutate(studentData);
@@ -211,257 +207,233 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
     const formContent = (
         <div className="space-y-4">
             {/* Tab Navigation */}
-                    <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('single')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                                activeTab === 'single'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
+            <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('single')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        activeTab === 'single'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                    <User className="h-4 w-4" />
+                    Viens skolēns
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('excel')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        activeTab === 'excel'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                    <Upload className="h-4 w-4" />
+                    Excel fails
+                </button>
+            </div>
+
+            {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
+            {/* Single Student Form */}
+            {activeTab === 'single' && (
+                <form
+                    onSubmit={studentForm.handleSubmit(handleStudentSubmit)}
+                    className="space-y-4"
+                >
+                    <div>
+                        <label
+                            htmlFor="name"
+                            className="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            <User className="h-4 w-4" />
-                            Viens skolēns
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('excel')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                                activeTab === 'excel'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <Upload className="h-4 w-4" />
-                            Excel fails
-                        </button>
+                            Vārds un uzvārds
+                        </label>
+                        <Input
+                            id="name"
+                            type="text"
+                            placeholder="Ievadiet skolēna vārdu..."
+                            disabled={isLoading}
+                            {...studentForm.register("name")}
+                        />
+                        {studentForm.formState.errors.name && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {studentForm.formState.errors.name.message}
+                            </p>
+                        )}
                     </div>
 
-                    {error && (
-                        <Alert variant="destructive" className="mb-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    )}
-
-                    {/* Single Student Form */}
-                    {activeTab === 'single' && (
-                        <form
-                            onSubmit={studentForm.handleSubmit(handleStudentSubmit)}
-                            className="space-y-4"
+                    <div>
+                        <label
+                            htmlFor="class"
+                            className="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            <div>
-                                <label
-                                    htmlFor="name"
-                                    className="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    Vārds un uzvārds
-                                </label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    placeholder="Ievadiet skolēna vārdu..."
-                                    disabled={isLoading}
-                                    {...studentForm.register("name")}
-                                />
-                                {studentForm.formState.errors.name && (
-                                    <p className="text-red-500 text-sm mt-1">
-                                        {studentForm.formState.errors.name.message}
-                                    </p>
-                                )}
-                            </div>
+                            Klase
+                        </label>
+                        <Input
+                            id="class"
+                            type="text"
+                            placeholder="Piemēram: 12B"
+                            disabled={isLoading}
+                            {...studentForm.register("class")}
+                        />
+                        {studentForm.formState.errors.class && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {studentForm.formState.errors.class.message}
+                            </p>
+                        )}
+                    </div>
 
-                            <div>
-                                <label
-                                    htmlFor="class"
-                                    className="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    Klase
-                                </label>
-                                <Input
-                                    id="class"
-                                    type="text"
-                                    placeholder="Piemēram: 12B"
-                                    disabled={isLoading}
-                                    {...studentForm.register("class")}
-                                />
-                                {studentForm.formState.errors.class && (
-                                    <p className="text-red-500 text-sm mt-1">
-                                        {studentForm.formState.errors.class.message}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="email"
-                                    className="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    E-pasts
-                                </label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="skolens@skola.lv"
-                                    disabled={isLoading}
-                                    {...studentForm.register("email")}
-                                />
-                                {studentForm.formState.errors.email && (
-                                    <p className="text-red-500 text-sm mt-1">
-                                        {studentForm.formState.errors.email.message}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="status"
-                                    className="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    Statuss
-                                </label>
-                                <select
-                                    id="status"
-                                    disabled={isLoading}
-                                    {...studentForm.register("status")}
-                                    className="w-full h-12 px-4 border border-gray-300 rounded-lg bg-white"
-                                >
-                                    <option value="klātbūtnē">Klātbūtnē</option>
-                                    <option value="prombūtnē">Prombūtnē</option>
-                                    <option value="neviens">Gaida</option>
-                                </select>
-                                {studentForm.formState.errors.status && (
-                                    <p className="text-red-500 text-sm mt-1">
-                                        {studentForm.formState.errors.status.message}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={onClose}
-                                    disabled={isLoading}
-                                    className="flex-1"
-                                >
-                                    Atcelt
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="flex-1"
-                                >
-                                    {createStudentMutation.isPending
-                                        ? "Pievieno..."
-                                        : "Pievienot skolēnu"}
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-
-                    {/* Excel Upload Form */}
-                    {activeTab === 'excel' && (
-                        <form
-                            onSubmit={excelForm.handleSubmit(handleExcelSubmit)}
-                            className="space-y-4"
+                    <div>
+                        <label
+                            htmlFor="email"
+                            className="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Excel fails
-                                </label>
+                            E-pasts
+                        </label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="skolens@skola.lv"
+                            disabled={isLoading}
+                            {...studentForm.register("email")}
+                        />
+                        {studentForm.formState.errors.email && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {studentForm.formState.errors.email.message}
+                            </p>
+                        )}
+                    </div>
 
-                                <div
-                                    className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                                        dragActive
-                                            ? "border-blue-400 bg-blue-50"
-                                            : "border-gray-300 hover:border-gray-400"
-                                    } ${isLoading ? "opacity-50" : ""}`}
-                                    onDragEnter={handleDrag}
-                                    onDragLeave={handleDrag}
-                                    onDragOver={handleDrag}
-                                    onDrop={handleDrop}
-                                >
-                                    <input
-                                        type="file"
-                                        accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                                        disabled={isLoading}
-                                        {...excelForm.register("file")}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
+                    <div className="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            disabled={isLoading}
+                            className="flex-1"
+                        >
+                            Atcelt
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1"
+                        >
+                            {createStudentMutation.isPending
+                                ? "Pievieno..."
+                                : "Pievienot skolēnu"}
+                        </Button>
+                    </div>
+                </form>
+            )}
 
-                                    <div className="space-y-2">
-                                        {selectedFile ? (
-                                            <>
-                                                <FileSpreadsheet className="mx-auto h-8 w-8 text-green-500" />
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {selectedFile.name}
-                                                </p>
-                                                <p className="text-xs text-gray-500">
-                                                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                                                </p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        Noklikšķiniet vai ievelciet failu šeit
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        Atbalstītie formāti: .xlsx, .xls (līdz 1GB)
-                                                    </p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
+            {/* Excel Upload Form */}
+            {activeTab === 'excel' && (
+                <form
+                    onSubmit={excelForm.handleSubmit(handleExcelSubmit)}
+                    className="space-y-4"
+                >
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Excel fails
+                        </label>
 
-                                {excelForm.formState.errors.file && (
-                                    <p className="text-red-500 text-sm mt-1">
-                                        {excelForm.formState.errors.file.message}
-                                    </p>
+                        <div
+                            className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                                dragActive
+                                    ? "border-blue-400 bg-blue-50"
+                                    : "border-gray-300 hover:border-gray-400"
+                            } ${isLoading ? "opacity-50" : ""}`}
+                            onDragEnter={handleDrag}
+                            onDragLeave={handleDrag}
+                            onDragOver={handleDrag}
+                            onDrop={handleDrop}
+                        >
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                                disabled={isLoading}
+                                {...excelForm.register("file")}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+
+                            <div className="space-y-2">
+                                {selectedFile ? (
+                                    <>
+                                        <FileSpreadsheet className="mx-auto h-8 w-8 text-green-500" />
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {selectedFile.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                Noklikšķiniet vai ievelciet failu šeit
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Atbalstītie formāti: .xlsx, .xls (līdz 1GB)
+                                            </p>
+                                        </div>
+                                    </>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-xs text-blue-700">
-                                    <strong>Piezīme:</strong> Excel failam jāsatur kolonnas: Vārds un uzvārds, Klase, E-pasts.
-                                    Pirmā rinda tiks uzskatīta par virsrakstiem.
-                                </p>
-                            </div>
+                        {excelForm.formState.errors.file && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {excelForm.formState.errors.file.message}
+                            </p>
+                        )}
+                    </div>
 
-                            <div className="w-full mb-2">
-                                <img
-                                    src="./example.png"
-                                    alt="Faila piemērs"
-                                    className="rounded-xl shadow w-full h-auto object-cover"
-                                />
-                            </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-700">
+                            <strong>Piezīme:</strong> Excel failam jāsatur kolonnas: Vārds un uzvārds, Klase, E-pasts.
+                            Pirmā rinda tiks uzskatīta par virsrakstiem. Visiem skolēniem automātiski tiks piešķirts statuss "Gaida".
+                        </p>
+                    </div>
 
-                            <div className="flex gap-3 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={onClose}
-                                    disabled={isLoading}
-                                    className="flex-1"
-                                >
-                                    Atcelt
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading || !selectedFile}
-                                    className="flex-1"
-                                >
-                                    {uploadExcelMutation.isPending
-                                        ? "Augšupielādē..."
-                                        : "Augšupielādēt"}
-                                </Button>
-                            </div>
-                        </form>
-                    )}
+                    <div className="w-full mb-2">
+                        <img
+                            src="./example.png"
+                            alt="Faila piemērs"
+                            className="rounded-xl shadow w-full h-auto object-cover"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            disabled={isLoading}
+                            className="flex-1"
+                        >
+                            Atcelt
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isLoading || !selectedFile}
+                            className="flex-1"
+                        >
+                            {uploadExcelMutation.isPending
+                                ? "Augšupielādē..."
+                                : "Augšupielādēt"}
+                        </Button>
+                    </div>
+                </form>
+            )}
         </div>
     );
 

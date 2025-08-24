@@ -48,8 +48,6 @@ class StudentController extends Controller {
                 'uuid' => Str::uuid()->toString(),
             ]);
 
-            $this->sendEmail($student);
-
             Log::create([
                 'student_id' => $student->id,
                 'user_id' => Auth::id(),
@@ -184,22 +182,32 @@ class StudentController extends Controller {
         }
 
         try {
+            // Store student data before deletion
             $studentName = $student->name;
             $studentId = $student->id;
+            $studentEmail = $student->email;
+            $studentClass = $student->class;
 
-            $existsAccess = AccessCredential::query()->where('student_id', $student->id)->get();
-            foreach ($existsAccess as $as) {
-                $as->delete();
-            }
-
+            // Create deletion log BEFORE deleting the student
             Log::create([
-                'student_id' => $studentId,
+                'student_id' => null, // Set to null since student will be deleted
                 'user_id' => Auth::id(),
                 'action' => 'student_deleted',
-                'description' => "Student '{$studentName}' deleted by " . Auth::user()->name,
+                'description' => "Student '{$studentName}' (ID: {$studentId}, Email: {$studentEmail}, Class: {$studentClass}) deleted by " . Auth::user()->name,
                 'time' => now(),
             ]);
 
+            // Update existing logs to preserve them by setting student_id to null
+            // This prevents cascade deletion and keeps the historical record
+            Log::where('student_id', $studentId)->update([
+                'student_id' => null,
+                'description' => \DB::raw("'[DELETED STUDENT: {$studentName} (ID: {$studentId})] ' || description")
+            ]);
+
+            // Delete access credentials
+            AccessCredential::where('student_id', $student->id)->delete();
+
+            // Finally delete the student
             $student->delete();
 
             return response()->json([
@@ -306,8 +314,6 @@ class StudentController extends Controller {
                 'time' => now(),
             ]);
 
-            $this->sendEmail($student);
-
             return response()->json([
                 'status' => 200,
                 'message' => 'Student updated successfully',
@@ -337,12 +343,16 @@ class StudentController extends Controller {
             $errors = [];
 
             foreach ($data as $index => $studentData) {
+                $uuid = isset($studentData['qr_code']) && !empty(trim($studentData['qr_code']))
+                    ? trim($studentData['qr_code'])
+                    : Str::uuid()->toString();
+
                 $insertData = [
-                    'status' => 'prombūtnē',
+                    'status' => 'neviens',
                     'name'   => trim($studentData['name'] ?? ''),
                     'email'  => trim($studentData['email'] ?? ''),
                     'class'  => trim($studentData['group'] ?? ''),
-                    'uuid'   => Str::uuid()->toString(),
+                    'uuid'   => $uuid,
                     'time'   => now(),
                 ];
 
@@ -351,18 +361,26 @@ class StudentController extends Controller {
                     continue;
                 }
 
-                $exists = Student::query()->where('email', $insertData['email'])->first();
-
-                if ($exists) {
+                $emailExists = Student::query()->where('email', $insertData['email'])->first();
+                if ($emailExists) {
                     $errors[] = "Row $index: Student with email {$insertData['email']} already exists";
                     continue;
                 }
 
-                $student = Student::query()->create($insertData);
-                $createdStudents[] = $student;
+                $uuidExists = Student::query()->where('uuid', $uuid)->first();
+                if ($uuidExists) {
+                    $errors[] = "Row $index: Student with QR Code/UUID {$uuid} already exists";
+                    continue;
+                }
+
+                try {
+                    $student = Student::query()->create($insertData);
+                    $createdStudents[] = $student;
+                } catch (\Exception $e) {
+                    $errors[] = "Row $index: Failed to create student - " . $e->getMessage();
+                }
             }
 
-            // Use provided employee_id or fall back to authenticated user
             $employeeId = $request->input('employee_id') ?? Auth::id();
             $employeeName = 'system';
 
@@ -377,7 +395,7 @@ class StudentController extends Controller {
                 'student_id'  => null,
                 'user_id'     => $employeeId,
                 'action'      => 'mass_student_upload',
-                'description' => '. Created: ' . count($createdStudents) .
+                'description' => "Mass upload by {$employeeName}. Created: " . count($createdStudents) .
                     ', Errors: ' . count($errors) .
                     ', Total processed: ' . count($data),
                 'time' => now(),
@@ -386,40 +404,15 @@ class StudentController extends Controller {
             return response()->json([
                 'status'  => 200,
                 'message' => count($createdStudents) . ' students uploaded successfully',
+                'created' => count($createdStudents),
                 'errors'  => $errors,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => 500,
-                'message' => 'Failed to retrieve students',
+                'message' => 'Failed to process mass upload',
                 'error'   => $e->getMessage(),
             ], 500);
-        }
-    }
-
-
-    private function sendEmail(Student $student): void {
-        try {
-            $accessCredential = AccessCredential::create([
-                'email' => $student->email,
-                'student_id' => $student->id,
-                'qrcode_url' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode(base64_encode('474554202F63646F722E6367693F6F70656E3D3126646F6F723D3020485454502F312E310D0A486F73743A203139322E3136382E31332E3233350D0A417574686F72697A6174696F6E3A2042617369632059574E7430566D6C75364F4467344F4467344F4467340D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A436F6E6E656374696F6E3A20636C6F73650D0A0D0A')) . '&margin=30',
-                'uuid' => $student->uuid,
-            ]);
-
-            Mail::to($student->email)->send(new QrCodeMail(
-                $student->name,
-                $student->email,
-                $accessCredential->qrcode_url,
-            ));
-        } catch (\Exception $e) {
-            Log::create([
-                'student_id' => $student->id,
-                'user_id' => Auth::id(),
-                'action' => 'email_send_failed',
-                'description' => 'Failed to send email to student',
-                'time' => now(),
-            ]);
         }
     }
 }

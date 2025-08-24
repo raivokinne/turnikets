@@ -39,7 +39,7 @@ interface ReportModalProps {
 }
 
 const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
-    const { logs, getLogsByDateRange } = useLogs();
+    const { logs, getAllLogsForReport, loading: hooksLoading } = useLogs();
 
     const [filters, setFilters] = useState<FilterState>({
         startDate: new Date().toISOString().split('T')[0],
@@ -59,6 +59,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
     });
 
     const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
+    const [allDateRangeLogs, setAllDateRangeLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
     // Apply frontend filters to logs
@@ -113,10 +114,9 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         return filtered;
     }, [filters.startTime, filters.endTime, filters.query, filters.action, filters.class]);
 
-    // Build report from given logs (or from hook logs if not provided)
-    const buildReportFromLogs = useCallback((logsToUse?: LogEntry[]) => {
-        const sourceLogs = logsToUse || logs;
-        if (!sourceLogs || !sourceLogs.length) {
+    // Build report from given logs
+    const buildReportFromLogs = useCallback((logsToUse: LogEntry[]) => {
+        if (!logsToUse || !logsToUse.length) {
             setReportData({ attendance: [], actionStats: [], classStats: [], timeline: [] });
             return;
         }
@@ -130,7 +130,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
             };
         }
 
-        const attendanceByDate = sourceLogs
+        const attendanceByDate = logsToUse
             .filter((log: LogEntry) => ['entry', 'exit'].includes(log.action || ''))
             .reduce<AttendanceAccumulator>((acc, log) => {
                 // assume log.time is like 'YYYY-MM-DD HH:MM:SS' or ISO string
@@ -149,7 +149,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
             [action: string]: number;
         }
 
-        const actionStats = sourceLogs.reduce<ActionAccumulator>((acc, log) => {
+        const actionStats = logsToUse.reduce<ActionAccumulator>((acc, log) => {
             const action = log.action || 'unknown';
             if (!acc[action]) acc[action] = 0;
             acc[action]++;
@@ -161,7 +161,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
             [className: string]: number;
         }
 
-        const classStats = sourceLogs
+        const classStats = logsToUse
             .filter((log: LogEntry) => log.student?.class)
             .reduce<ClassAccumulator>((acc, log) => {
                 const className = log.student!.class;
@@ -174,21 +174,21 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
             attendance: Object.values(attendanceByDate),
             actionStats: Object.entries(actionStats).map(([name, value]) => ({ name, value })),
             classStats: Object.entries(classStats).map(([name, value]) => ({ name, value })),
-            timeline: sourceLogs.slice(0, 10)
+            timeline: logsToUse.slice(0, 10)
         });
-    }, [logs]);
+    }, []);
 
-    // Apply filters whenever logs or filter criteria change
+    // Apply filters whenever allDateRangeLogs or filter criteria change
     useEffect(() => {
-        if (logs && logs.length > 0) {
-            const filtered = applyFrontendFilters(logs);
+        if (allDateRangeLogs && allDateRangeLogs.length > 0) {
+            const filtered = applyFrontendFilters(allDateRangeLogs);
             setFilteredLogs(filtered);
             buildReportFromLogs(filtered);
         } else {
             setFilteredLogs([]);
             buildReportFromLogs([]);
         }
-    }, [logs, applyFrontendFilters, buildReportFromLogs]);
+    }, [allDateRangeLogs, applyFrontendFilters, buildReportFromLogs]);
 
     const handleFilterChange = (key: keyof FilterState, value: string): void => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -197,15 +197,23 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
     const applyFilters = async (): Promise<void> => {
         setLoading(true);
         try {
-            // Fetch logs by date range first
-            await getLogsByDateRange(filters.startDate, filters.endDate);
-            // The useEffect will automatically apply frontend filters when logs update
+            // Fetch ALL logs for the date range (not just 50)
+            const allLogs = await getAllLogsForReport(filters.startDate, filters.endDate);
+            setAllDateRangeLogs(allLogs);
         } catch (error) {
             console.error('Error applying filters:', error);
+            setAllDateRangeLogs([]);
         } finally {
             setLoading(false);
         }
     };
+
+    // Load initial data when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            applyFilters();
+        }
+    }, [isOpen]);
 
     const formatDateTime = (dateTimeString: string) => {
         if (!dateTimeString) return { date: 'N/A', time: 'N/A' };
@@ -224,37 +232,16 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    const exportToCSV = (): void => {
-        const headers: string[] = ['Date', 'Time', 'Student ID', 'Student Name', 'Student Email', 'Action', 'Class', 'Description'];
-        const csvData = [
-            headers.join(','),
-            ...filteredLogs.map((log: LogEntry) => {
-                const { date, time } = formatDateTime(log.time || '');
-                return [
-                    date,
-                    time,
-                    (log.student_id || '').toString(),
-                    log.student?.name || 'N/A',
-                    log.student?.email || 'N/A',
-                    log.action || 'N/A',
-                    log.student?.class || 'N/A',
-                    log.description || ''
-                ].map((field: string) => `"${field}"`).join(',');
-            })
-        ].join('\n');
-
-        const blob = new Blob([csvData], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `logs_report_${filters.startDate}_${filters.endDate}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-    };
-
     const exportToPDF = (): void => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
+
+        // Generate date range for the header
+        const startDateFormatted = new Date(filters.startDate).toLocaleDateString('lv-LV');
+        const endDateFormatted = new Date(filters.endDate).toLocaleDateString('lv-LV');
+        const dateRange = filters.startDate === filters.endDate
+            ? startDateFormatted
+            : `${startDateFormatted} - ${endDateFormatted}`;
 
         const printContent = `
 <!DOCTYPE html>
@@ -262,41 +249,135 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
 <head>
 <title>Aktivitāšu atskaite</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-.header { text-align: center; margin-bottom: 30px; }
-.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-.summary-card { padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-th { background-color: #f5f5f5; }
+body { 
+    font-family: Arial, sans-serif; 
+    margin: 20px; 
+    font-size: 12px;
+    line-height: 1.4;
+}
+.header { 
+    text-align: center; 
+    margin-bottom: 30px; 
+    border-bottom: 2px solid #333;
+    padding-bottom: 15px;
+}
+.header h1 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+    color: #333;
+}
+.header .subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+}
+.summary { 
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border: 1px solid #dee2e6;
+}
+.summary h3 {
+    margin-top: 0;
+    color: #495057;
+    font-size: 16px;
+}
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-bottom: 20px; 
+    font-size: 11px;
+}
+th, td { 
+    padding: 8px 6px; 
+    text-align: left; 
+    border: 1px solid #dee2e6; 
+    vertical-align: top;
+}
+th { 
+    background-color: #f8f9fa; 
+    font-weight: bold;
+    color: #495057;
+}
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+.description-cell {
+    max-width: 200px;
+    word-wrap: break-word;
+    font-style: italic;
+    color: #6c757d;
+}
+.student-name {
+    font-weight: bold;
+}
+.action-entry { color: #28a745; }
+.action-exit { color: #dc3545; }
+.group-cell { font-weight: bold; color: #007bff; }
+@media print {
+    body { margin: 15px; font-size: 10px; }
+    .header h1 { font-size: 20px; }
+    table { font-size: 9px; }
+    th, td { padding: 4px; }
+}
 </style>
 </head>
 <body>
 
-<h2>aktivitātes</h2>
+<div class="header">
+    <h1>Aktivitāšu atskaite</h1>
+    <div class="subtitle">Periods: ${dateRange}</div>
+    <div class="subtitle">Kopā ierakstu: ${filteredLogs.length}</div>
+    <div class="subtitle">Ģenerēts: ${new Date().toLocaleDateString('lv-LV')} ${new Date().toLocaleTimeString('lv-LV', { hour: '2-digit', minute: '2-digit' })}</div>
+</div>
+
+<div class="summary">
+    <h3>Atskaites kopsavilkums</h3>
+    <p><strong>Datumu diapazons:</strong> ${dateRange}</p>
+    <p><strong>Laika diapazons:</strong> ${filters.startTime} - ${filters.endTime}</p>
+    ${filters.query ? `<p><strong>Meklēšanas vaicājums:</strong> ${filters.query}</p>` : ''}
+    ${filters.action ? `<p><strong>Darbības filtrs:</strong> ${filters.action === 'entry' ? 'Ieeja' : filters.action === 'exit' ? 'Izeja' : filters.action}</p>` : ''}
+    ${filters.class ? `<p><strong>Grupas filtrs:</strong> ${filters.class}</p>` : ''}
+</div>
+
+<h2>Aktivitātes</h2>
 <table>
 <thead>
 <tr>
-<th>Datums</th>
-<th>Laiks</th>
-<th>Skolēns</th>
-<th>Darbība</th>
+<th style="width: 12%;">Datums</th>
+<th style="width: 8%;">Laiks</th>
+<th style="width: 20%;">Skolēns</th>
+<th style="width: 12%;">Grupa</th>
+<th style="width: 10%;">Darbība</th>
+<th style="width: 38%;">Apraksts</th>
 </tr>
 </thead>
 <tbody>
-${filteredLogs.slice(0, 20).map((log: LogEntry) => {
+${filteredLogs.map((log: LogEntry) => {
             const { date, time } = formatDateTime(log.time || '');
+            const actionText = log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'N/A';
+            const actionClass = log.action === 'entry' ? 'action-entry' : log.action === 'exit' ? 'action-exit' : '';
+            const studentName = log.student?.name || 'N/A';
+            const studentClass = log.student?.class || 'N/A';
+            const description = log.description || '';
+
             return `
 <tr>
 <td>${date}</td>
 <td>${time}</td>
-<td>${log.student?.name || 'N/A'}</td>
-<td>${log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'N/A'}</td>
+<td class="student-name">${studentName}</td>
+<td class="group-cell">${studentClass}</td>
+<td class="${actionClass}">${actionText}</td>
+<td class="description-cell">${description}</td>
 </tr>
 `;
         }).join('')}
 </tbody>
 </table>
+
+${filteredLogs.length === 0 ? '<div style="text-align: center; padding: 20px; color: #6c757d;"><p>Nav atrasti ieraksti ar norādītajiem filtriem</p></div>' : ''}
+
 </body>
 </html>
 `;
@@ -316,14 +397,6 @@ ${filteredLogs.slice(0, 20).map((log: LogEntry) => {
                             <p className="text-gray-600 mt-1">Žurnāla analīzes</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={exportToCSV}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                type="button"
-                            >
-                                <Download size={16} />
-                                Eksportēt CSV
-                            </button>
                             <button
                                 onClick={exportToPDF}
                                 className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -407,11 +480,11 @@ ${filteredLogs.slice(0, 20).map((log: LogEntry) => {
                             <div className="flex-shrink-0">
                                 <button
                                     onClick={applyFilters}
-                                    disabled={loading}
+                                    disabled={loading || hooksLoading}
                                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                     type="button"
                                 >
-                                    {loading ? (
+                                    {(loading || hooksLoading) ? (
                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                     ) : (
                                         <Search size={16} />
@@ -428,7 +501,7 @@ ${filteredLogs.slice(0, 20).map((log: LogEntry) => {
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Kopā ierakstu</p>
                                 <p className="text-2xl font-bold text-gray-900">{filteredLogs.length}</p>
-                                <p className="text-xs text-gray-500 mt-1">No {(logs || []).length} kopējiem ierakstiem</p>
+                                <p className="text-xs text-gray-500 mt-1">No {allDateRangeLogs.length} ierakstiem datumu diapazonā</p>
                             </div>
                             <FileText className="h-8 w-8 text-blue-600" />
                         </div>
@@ -437,30 +510,36 @@ ${filteredLogs.slice(0, 20).map((log: LogEntry) => {
                     {/* Timeline */}
                     <div>
                         <h4 className="text-lg font-semibold mb-4">Pēdējās aktivitātes</h4>
-                        <div className="space-y-4">
-                            {reportData.timeline.map((log: LogEntry) => {
-                                const { date, time } = formatDateTime(log.time || '');
-                                return (
-                                    <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                                        <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {log.student?.name || 'Nezināms skolēns'} - {log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'Nezināma darbība'}
+                        {reportData.timeline.length > 0 ? (
+                            <div className="space-y-4">
+                                {reportData.timeline.map((log: LogEntry) => {
+                                    const { date, time } = formatDateTime(log.time || '');
+                                    return (
+                                        <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                                            <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {log.student?.name || 'Nezināms skolēns'} - {log.action === 'entry' ? 'Ieeja' : log.action === 'exit' ? 'Izeja' : log.action || 'Nezināma darbība'}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">{date} {time}</p>
+                                                </div>
+                                                {log.description && (
+                                                    <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                                                )}
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Klase: {log.student?.class || 'N/A'} | ID: {log.student_id}
                                                 </p>
-                                                <p className="text-xs text-gray-500">{date} {time}</p>
                                             </div>
-                                            {log.description && (
-                                                <p className="text-sm text-gray-600 mt-1">{log.description}</p>
-                                            )}
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Klase: {log.student?.class || 'N/A'} | ID: {log.student_id}
-                                            </p>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <p className="text-gray-500">Nav atrasti ieraksti ar norādītajiem filtriem</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </DialogContent>

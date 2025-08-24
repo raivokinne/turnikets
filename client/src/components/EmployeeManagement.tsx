@@ -459,7 +459,7 @@ const EmployeeManagement: React.FC = () => {
                                         </thead>
                                         <tbody>
                                         {logs.slice(0, 50).map((log) => (
-                                            <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <tr key={log.id} className="group border-b border-gray-100 hover:bg-gray-50">
                                                 <td className="py-3 px-4 text-sm">
                                                     <div className="flex items-center space-x-1">
                                                         <Calendar className="h-3 w-3 text-gray-400" />
@@ -490,7 +490,7 @@ const EmployeeManagement: React.FC = () => {
                                                         <span className="text-gray-400">-</span>
                                                     )}
                                                 </td>
-                                                <td className="py-3 px-4 max-w-xs truncate text-sm text-gray-600">
+                                                <td className="py-3 px-4 max-w-xs not-group-hover:truncate text-sm text-gray-600">
                                                     {log.description || '-'}
                                                 </td>
                                                 <td className="py-3 px-4 text-sm">

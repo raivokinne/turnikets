@@ -25,7 +25,7 @@ class LogController extends Controller
             'start_date' => 'sometimes|date_format:Y-m-d',
             'end_date' => 'sometimes|date_format:Y-m-d',
             'class' => 'sometimes|string',
-            'per_page' => 'sometimes|integer|min:1|max:100'
+            'per_page' => 'sometimes|integer|min:1|max:5000' // Increased limit for reports
         ]);
 
         if ($validator->fails()) {
@@ -110,6 +110,90 @@ class LogController extends Controller
             return response()->json([
                 'status' => 500,
                 'message' => 'Failed to retrieve logs',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get logs for reports - no pagination limits
+     */
+    public function getReportData(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'start_date' => 'required|date_format:Y-m-d',
+            'end_date' => 'required|date_format:Y-m-d',
+            'action' => 'sometimes|string|in:login,logout,entry,exit,profile_update,user_created,user_updated,user_deleted,student_created,student_updated,student_deleted,mass_student_upload,email_send_failed',
+            'class' => 'sometimes|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->incorrectPayload($validator->errors());
+        }
+
+        try {
+            $query = Log::with(['student', 'user'])
+                ->whereBetween('time', [
+                    $request->start_date . ' 00:00:00',
+                    $request->end_date . ' 23:59:59'
+                ])
+                ->where('hidden', '!=', true);
+
+            if ($request->has('action')) {
+                $query->where('action', $request->action);
+            }
+
+            if ($request->has('class')) {
+                $query->whereHas('student', function($q) use ($request) {
+                    $q->where('class', $request->class);
+                });
+            }
+
+            // Filter by user role if not admin
+            if (Auth::user()->role !== 'admin') {
+                $query->whereIn('action', ['entry', 'exit']);
+            }
+
+            // Get ALL logs without pagination for reports
+            $logs = $query->orderBy('time', 'desc')->get();
+
+            $logs->transform(function ($log) {
+                $details = null;
+                if ($log->details) {
+                    try {
+                        $details = json_decode($log->details, true);
+                    } catch (\Exception $e) {
+                        $details = null;
+                    }
+                }
+
+                $log->performed_by_user = null;
+                if ($log->user) {
+                    $log->performed_by_user = [
+                        'id' => $log->user->id,
+                        'name' => $log->user->name,
+                        'email' => $log->user->email,
+                        'role' => $log->user->role
+                    ];
+                } elseif ($details && isset($details['performed_by'])) {
+                    $log->performed_by_user = [
+                        'name' => $details['performed_by']
+                    ];
+                }
+
+                $log->parsed_details = $details;
+                return $log;
+            });
+
+            return response()->json([
+                'status' => 200,
+                'data' => $logs
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to retrieve report data',
                 'error' => $e->getMessage()
             ], 500);
         }

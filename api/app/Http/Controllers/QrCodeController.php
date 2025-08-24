@@ -19,8 +19,10 @@ class QrCodeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'to' => 'required|email|exists:students,email',
-            'attachmentUrl' => 'required|url',
-            'data' => 'required|string',
+            'data' => 'sometimes|string',
+            'name' => 'sometimes|string',
+            'id' => 'sometimes|integer',
+            'class' => 'sometimes|string',
         ]);
 
         if ($validator->fails()) {
@@ -37,14 +39,12 @@ class QrCodeController extends Controller
         }
 
         try {
-            // Check if credential already exists
             $existingCredential = AccessCredential::where('student_id', $student->id)->first();
             $isRegeneration = $existingCredential !== null;
 
-            // Use updateOrCreate to handle both new and existing credentials
             $accessCredential = AccessCredential::updateOrCreate(
                 [
-                    'student_id' => $student->id, // Search by student_id
+                    'student_id' => $student->id,
                 ],
                 [
                     'email' => $student->email,
@@ -210,5 +210,17 @@ class QrCodeController extends Controller
             'status' => 200,
             'message' => 'Access credential deleted successfully',
         ]);
+    }
+
+    /**
+     * Helper method to return validation errors
+     */
+    public function incorrectPayload($errors): JsonResponse
+    {
+        return response()->json([
+            'status' => 400,
+            'message' => 'Incorrect Payload',
+            'errors' => $errors,
+        ], 400);
     }
 }

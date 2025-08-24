@@ -11,108 +11,100 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+    email: z.string().email({ message: 'Please enter a valid email address' }),
+    password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
+    const form = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: '',
+            password: '',
+        },
+    });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
-    setError(null);
+    const onSubmit = async (data: LoginFormValues) => {
+        setIsLoading(true);
+        setError(null);
 
-    try {
-      await login(data);
-      navigate("/dashboard");
-    } catch {
-      setError('Failed to login. Please check your credentials and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+            await login(data);
+            console.log('Login successful');
+        } catch (err: any) {
+            console.error('Login error:', err);
+            setError(err.message || 'Failed to login. Please check your credentials and try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md">
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Pieteikties</CardTitle>
-            <CardDescription className="text-center">
-              Ievadiet savu e-pastu un paroli, lai piekļūtu savam kontam
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <Card className="w-full max-w-md">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-2xl text-center">Pieteikties</CardTitle>
+                    <CardDescription className="text-center">
+                        Ievadiet savu e-pastu un paroli, lai piekļūtu savam kontam
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {error && (
+                        <Alert variant="destructive" className="mb-4">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-1">
-                  E-pasts
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@example.com"
-                  autoComplete="email"
-                  disabled={isLoading}
-                  {...form.register('email')}
-                />
-                {form.formState.errors.email && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="space-y-2">
+                            <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                E-pasts
+                            </label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="your@email.com"
+                                {...form.register('email')}
+                                disabled={isLoading}
+                            />
+                            {form.formState.errors.email && (
+                                <p className="text-sm text-red-600">
+                                    {form.formState.errors.email.message}
+                                </p>
+                            )}
+                        </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
-                  Parole
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                  {...form.register('password')}
-                />
-                {form.formState.errors.password && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.password.message}
-                  </p>
-                )}
-              </div>
+                        <div className="space-y-2">
+                            <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Parole
+                            </label>
+                            <Input
+                                id="password"
+                                type="password"
+                                {...form.register('password')}
+                                disabled={isLoading}
+                            />
+                            {form.formState.errors.password && (
+                                <p className="text-sm text-red-600">
+                                    {form.formState.errors.password.message}
+                                </p>
+                            )}
+                        </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? "Notiek Pieteikšanās..." : "Pieteikties"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading ? "Notiek Pieteikšanās..." : "Pieteikties"}
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

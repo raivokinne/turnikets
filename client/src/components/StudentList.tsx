@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
 import { LogStudentInfo } from '@/types/logs';
 import { Student } from '@/types/students';
 import { Search, ArrowRight, ArrowLeft } from 'lucide-react';
-import { StudentShow } from './StudentShow';
 
 interface StudentListProps {
     logStudentData: LogStudentInfo[];
 }
 
 const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [showModal, setShowModal] = useState(false);
-
     const processedStudents: Student[] = logStudentData.map(({ log, student }) => {
         const processedStudent = { ...student };
 
         // Keep the original action for processing
         processedStudent.action = log.action;
+        processedStudent.description = log.description;
 
         if (log.time) {
             const logDate = new Date(log.time);
@@ -33,30 +29,40 @@ const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
         return processedStudent;
     });
 
-    const getActionDisplay = (action: string) => {
+    const getActionDisplay = (action: string, description: string) => {
         const actionLower = action?.toLowerCase();
+        const descriptionLower = description?.toLowerCase();
 
-        if (actionLower === 'exit') {
+        // Check if description contains "divreiz!"
+        const hasDivreiz = descriptionLower?.includes('divreiz!');
+
+        if (actionLower === 'exit' || actionLower?.includes('izeja')) {
             return {
                 text: 'Izeja',
-                color: 'text-red-600',
-                bgColor: 'bg-red-100',
-                icon: <ArrowRight className="w-3 h-3" />
+                color: hasDivreiz ? 'text-white' : 'text-red-600',
+                bgColor: hasDivreiz ? 'bg-red-600' : 'bg-red-100',
+                icon: <ArrowRight className="w-3 h-3" />,
+                containerBg: hasDivreiz ? 'bg-red-200' : 'bg-gray-50',
+                containerHoverBg: hasDivreiz ? 'bg-red-300' : 'bg-gray-100'
             };
-        } else if (actionLower === 'entry') {
+        } else if (actionLower === 'entry' || actionLower?.includes('ieeja') || actionLower?.includes('ienāca')) {
             return {
                 text: 'Ieeja',
-                color: 'text-green-600',
-                bgColor: 'bg-green-100',
-                icon: <ArrowLeft className="w-3 h-3" />
+                color: hasDivreiz ? 'text-white' : 'text-green-600',
+                bgColor: hasDivreiz ? 'bg-green-700' : 'bg-green-100',
+                icon: <ArrowLeft className="w-3 h-3" />,
+                containerBg: hasDivreiz ? 'bg-red-200' : 'bg-gray-50',
+                containerHoverBg: hasDivreiz ? 'bg-red-300' : 'bg-gray-100'
             };
         }
 
         return {
-            text: action || 'Nav zināms',
-            color: 'text-gray-600',
-            bgColor: 'bg-gray-100',
-            icon: null
+            text: 'Nav zināms',
+            color: hasDivreiz ? 'text-white' : 'text-gray-600',
+            bgColor: hasDivreiz ? 'bg-gray-700' : 'bg-gray-100',
+            icon: null,
+            containerBg: hasDivreiz ? 'bg-red-200' : 'bg-gray-50',
+            containerHoverBg: hasDivreiz ? 'bg-red-300' : 'bg-gray-100'
         };
     };
 
@@ -81,11 +87,6 @@ const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
         }
     };
 
-    const handleStudentClick = (student: Student) => {
-        setSelectedStudent(student);
-        setShowModal(true);
-    };
-
     return (
         <>
             <div className="bg-white rounded-lg shadow-sm p-4">
@@ -96,14 +97,13 @@ const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
                 {processedStudents.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 h-[600px] overflow-y-auto" style={{ gridAutoRows: 'max-content' }}>
                         {processedStudents.map((student, index) => {
-                            const actionDisplay = getActionDisplay(student.action);
+                            const actionDisplay = getActionDisplay(student.action, student.description);
 
                             return (
                                 <div key={`${student.id}-${index}`} className="group relative" style={{ height: 'fit-content' }}>
                                     {/* Main student row */}
                                     <div
-                                        className="flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg group-hover:rounded-b-none transition-all duration-200 cursor-pointer px-3 py-2 relative z-10"
-                                        onClick={() => handleStudentClick(student)}
+                                        className={`flex items-center ${actionDisplay.containerBg} hover:${actionDisplay.containerHoverBg} border border-gray-200 hover:border-gray-300 rounded-lg group-hover:rounded-b-none transition-all duration-200 px-3 py-2 relative z-10`}
                                     >
                                         {/* Action badge */}
                                         <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium mr-3 flex-shrink-0 ${actionDisplay.bgColor} ${actionDisplay.color}`}>
@@ -111,8 +111,8 @@ const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
                                             <span>{actionDisplay.text}</span>
                                         </div>
 
-                                        {/* Student name - single line */}
-                                        <h3 className="text-sm font-medium text-gray-900 mr-2 flex-1 truncate">
+                                        {/* Student name - allow wrapping instead of truncating */}
+                                        <h3 className="text-sm font-medium text-gray-900 mr-2 flex-1 leading-tight not-group-hover:truncate">
                                             {student.name}
                                         </h3>
 
@@ -142,14 +142,6 @@ const StudentList: React.FC<StudentListProps> = ({ logStudentData }) => {
                     </div>
                 )}
             </div>
-
-            {selectedStudent && (
-                <StudentShow
-                    student={selectedStudent}
-                    show={showModal}
-                    setShow={setShowModal}
-                />
-            )}
         </>
     );
 };

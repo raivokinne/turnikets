@@ -14,6 +14,7 @@ use InvalidArgumentException;
 class GateController extends Controller
 {
     private const HEARTBEAT_TIMEOUT = 10;
+    private const DUPLICATE_SCAN_TIMEOUT = 10;
 
     public function RequestStatus(Request $request): void
     {
@@ -28,18 +29,25 @@ class GateController extends Controller
 
     public function RequestCardEvent(Request $request): void
     {
-        error_log("Request Card event");
         $card = $request->all()['Card'];
-        error_log($card);
         $ip = $request->all()['IP'];
-        error_log($ip);
         $reader = $request->all()['Reader'];
-        error_log($reader);
         $student = Student::query()->where('uuid', $card)->first();
-        error_log($student->name);
 
         if ($student) {
             $notifier = app(NotificationService::class);
+
+            $lastLog = Log::query()
+                ->where('student_id', $student->id)
+                ->whereIn('action', ['entry', 'exit'])
+                ->orderBy('time', 'desc')
+                ->first();
+
+            if ($lastLog && $lastLog->time->diffInSeconds(now()) < self::DUPLICATE_SCAN_TIMEOUT) {
+                $this->openGateForReader($ip, $reader);
+                return;
+            }
+
             $lastLog = Log::query()
                 ->where('student_id', $student->id)
                 ->orderBy('time', 'desc')
@@ -49,11 +57,32 @@ class GateController extends Controller
 
             if ($lastLog && $lastLog->action === $intendedAction) {
                 $notifier->checkConsecutiveAction($student, $intendedAction);
+                $this->openGateForReader($ip, $reader);
+
+                if ($intendedAction == 'entry') {
+                    $student->status = 'klātbūtnē';
+                    Log::create([
+                        'time' => now(),
+                        'student_id' => $student->id,
+                        'action' => 'entry',
+                        'description' => $student->name.' ienāca iekšā '.now()->format('Y-m-d H:i:s'). ' divreiz!',
+                    ]);
+                } else {
+                    $student->status = 'prombūtnē';
+                    Log::create([
+                        'time' => now(),
+                        'student_id' => $student->id,
+                        'action' => 'entry',
+                        'description' => $student->name.' izgāja ārā '.now()->format('Y-m-d H:i:s'). ' divreiz!',
+                    ]);
+                }
+
+                $student->save();
                 return;
             }
 
             if ($intendedAction === 'exit') {
-                Log::create([
+                $log = Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'exit',
@@ -61,12 +90,15 @@ class GateController extends Controller
                 ]);
                 $student->status = 'prombūtnē';
                 $student->save();
-                Http::get('http://'.$ip.'/cdor.cgi', [
-                    'open' => 1,
-                    'door' => $reader,
-                ]);
+
+                $this->openGateForReader($ip, $reader);
+
+                $notifier->broadcastNewLog($log);
+
+                $notifier->sendEntryExitNotification($student, $intendedAction,
+                    $student->name . ' izgāja āra ' . now()->format('Y-m-d H:i:s'));
             } else {
-                Log::create([
+                $log = Log::create([
                     'time' => now(),
                     'student_id' => $student->id,
                     'action' => 'entry',
@@ -74,17 +106,26 @@ class GateController extends Controller
                 ]);
                 $student->status = 'klātbūtnē';
                 $student->save();
-                Http::get('http://'.$ip.'/cdor.cgi', [
-                    'open' => 1,
-                    'door' => $reader,
-                ]);
+
+                $this->openGateForReader($ip, $reader);
+
+                $notifier->broadcastNewLog($log);
+
+                $notifier->sendEntryExitNotification($student, $intendedAction,
+                    $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'));
             }
-
-            $notifier->sendEntryExitNotification($student, $intendedAction, $intendedAction === 'exit'
-                ? $student->name . ' izgāja āra '
-                : $student->name . ' ienāca iekšā ' . now()->format('Y-m-d H:i:s'));
-
         }
+    }
+
+    /**
+     * Helper method to open the gate for a specific reader
+     */
+    private function openGateForReader(string $ip, int $reader): void
+    {
+        Http::get('http://'.$ip.'/cdor.cgi', [
+            'open' => 1,
+            'door' => $reader,
+        ]);
     }
 
     private function getGateIp(int $number): string
@@ -193,27 +234,6 @@ class GateController extends Controller
         }
     }
 
-    public function getGateState(int $number): \Illuminate\Http\JsonResponse
-    {
-        if (!in_array($number, [1, 2])) {
-            return response()->json(['error' => 'Invalid gate number'], 400);
-        }
-
-        $isOpen = $this->getCurrentGateState($number);
-        $isOnline = $this->isGateOnline($number);
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'gateNumber' => $number,
-                'isOpen' => $isOpen,
-                'isOnline' => $isOnline,
-                'status' => $isOpen ? 'open' : 'closed',
-                'connectionStatus' => $isOnline ? 'online' : 'offline'
-            ]
-        ]);
-    }
-
     public function getAllGateStates(): \Illuminate\Http\JsonResponse
     {
         return response()->json([
@@ -226,31 +246,5 @@ class GateController extends Controller
                 'isOnline' => $this->isGateOnline(2)
             ]
         ]);
-    }
-
-    public function setGateStateManual(int $number, Request $request): \Illuminate\Http\JsonResponse
-    {
-        try {
-            if (!in_array($number, [1, 2])) {
-                return response()->json(['error' => 'Invalid gate number'], 400);
-            }
-
-            $isOpen = $request->boolean('isOpen', false);
-            $this->setGateState($number, $isOpen);
-
-            return response()->json([
-                'success' => true,
-                'message' => "Gate {$number} state manually set to " . ($isOpen ? 'open' : 'closed'),
-                'gateNumber' => $number,
-                'isOpen' => $isOpen
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => "Failed to set gate {$number} state: " . $e->getMessage(),
-                'gateNumber' => $number
-            ], 500);
-        }
     }
 }

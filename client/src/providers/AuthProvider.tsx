@@ -1,4 +1,4 @@
-import { createContext, JSX, useCallback, useContext, useState } from "react";
+import { createContext, JSX, useCallback, useContext, useState, useEffect } from "react";
 import {
     User,
     AuthContextValue,
@@ -20,9 +20,17 @@ type AuthProviderProps = {
     children: React.ReactNode;
 }
 
-const AuthContext = createContext<AuthContextValue>({
+// Extend AuthContextValue to include isLoading
+interface ExtendedAuthContextValue extends AuthContextValue {
+    isLoading: boolean;
+    isInitialized: boolean;
+}
+
+const AuthContext = createContext<ExtendedAuthContextValue>({
     user: null,
     authenticated: false,
+    isLoading: true,
+    isInitialized: false,
     login: async () => { /* Default implementation */ },
     logout: async () => { /* Default implementation */ }
 });
@@ -30,31 +38,42 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     const queryClient = useQueryClient();
     const [authenticated, setAuthenticated] = useState<boolean>(() => {
-        if (storage.get("token")) {
-            return true;
-        }
-        return false;
+        return !!storage.get("token");
     });
+    const [isInitialized, setIsInitialized] = useState(false);
 
-    const { data: user }: UseQueryResult<User | null> = useQuery({
+    const { data: user, isLoading: userQueryLoading }: UseQueryResult<User | null> = useQuery({
         queryKey: ['user'],
         queryFn: async () => {
             try {
-                if (!authenticated) {
+                const token = storage.get("token");
+                if (!token) {
+                    setAuthenticated(false);
                     return null;
                 }
-                return await authApi.getUser();
+
+                const userData = await authApi.getUser();
+                setAuthenticated(true);
+                return userData;
             } catch (error) {
-                if (storage.get("token")) {
-                    storage.remove("token");
-                    setAuthenticated(false);
-                }
-                throw error;
+                console.error('User fetch error:', error);
+                // If token is invalid, remove it
+                storage.remove("token");
+                setAuthenticated(false);
+                return null;
             }
         },
         retry: false,
         staleTime: 5 * 60 * 1000,
+        enabled: !!storage.get("token"), // Only run if token exists
     });
+
+    // Set initialized after initial user query completes
+    useEffect(() => {
+        if (!userQueryLoading) {
+            setIsInitialized(true);
+        }
+    }, [userQueryLoading]);
 
     const loginMutation: UseMutationResult<
         AuthResponse,
@@ -62,23 +81,27 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
         AuthCredentials
     > = useMutation({
         mutationFn: authApi.login,
-        onSuccess: (data: AuthResponse) => {
+        onSuccess: async (data: AuthResponse) => {
             if (data.status === 200 && data.token) {
                 storage.set("token", data.token);
-                toast.success(data.message);
                 setAuthenticated(true);
-                queryClient.invalidateQueries({ queryKey: ['user'] });
+
+                // Refetch user data immediately
+                await queryClient.refetchQueries({ queryKey: ['user'] });
+
+                toast.success(data.message || "Login successful");
             } else {
-                toast.error(data.errors ?
+                throw new Error(data.errors ?
                     (typeof data.errors === 'string' ? data.errors : 'Validation errors') :
-                    data.message
+                    data.message || 'Login failed'
                 );
             }
         },
         onError: (error: Error) => {
             console.error('Login error:', error);
-            toast.error("Something went wrong");
+            toast.error(error.message || "Login failed");
             setAuthenticated(false);
+            storage.remove("token");
         }
     });
 
@@ -92,27 +115,45 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
             storage.remove("token");
             setAuthenticated(false);
             queryClient.setQueryData(['user'], null);
+            queryClient.clear(); // Clear all queries
             toast.success("Logged out successfully");
-            window.location.href = "/";
         },
         onError: (error: Error) => {
             console.error('Logout error:', error);
-            toast.error("Something went wrong");
+            // Still logout locally even if server request fails
+            storage.remove("token");
+            setAuthenticated(false);
+            queryClient.setQueryData(['user'], null);
+            queryClient.clear();
+            toast.error("Logout completed (with errors)");
         }
     });
 
     const login = useCallback(async (credentials: AuthCredentials): Promise<void> => {
-        loginMutation.mutate(credentials);
+        return new Promise((resolve, reject) => {
+            loginMutation.mutate(credentials, {
+                onSuccess: () => resolve(),
+                onError: (error) => reject(error)
+            });
+        });
     }, [loginMutation]);
 
     const logout = useCallback(async (): Promise<void> => {
-        logoutMutation.mutate();
+        return new Promise((resolve) => {
+            logoutMutation.mutate(undefined, {
+                onSettled: () => resolve() // Always resolve, even on error
+            });
+        });
     }, [logoutMutation]);
+
+    const isLoading = userQueryLoading || loginMutation.isPending || logoutMutation.isPending;
 
     return (
         <AuthContext.Provider value={{
             user: user || null,
             authenticated,
+            isLoading,
+            isInitialized,
             login,
             logout
         }}>
@@ -121,4 +162,4 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     );
 }
 
-export const useAuth = (): AuthContextValue => useContext(AuthContext);
+export const useAuth = (): ExtendedAuthContextValue => useContext(AuthContext);

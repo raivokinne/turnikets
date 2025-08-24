@@ -6,6 +6,7 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserController;
+use App\Models\Log;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,11 +16,27 @@ Route::post('AcsDataApi/RequestCardEvent', [GateController::class, 'RequestCardE
 Route::post('mass-update', [StudentController::class, 'massUpdate']);
 
 Route::get('test', function () {
-    $student = Student::where('name', 'Emils')->first();
+    $student = Student::where('name', 'Emīls Pētersons')->first();
 
-    $notifier = app(\App\Services\NotificationService::class);
+    if (!$student) {
+        return response()->json(['error' => 'Student not found'], 404);
+    }
 
-    $notifier->sendConsecutiveActionWarning($student, 'entry');
+    $log = Log::create([
+        'student_id' => $student->id,
+        'action' => 'entry',
+        'description' => $student->name.' ienāca iekšā '.now()->format('Y-m-d H:i:s'),
+        'time' => now(),
+    ]);
+
+    $notificationService = new \App\Services\NotificationService();
+    $notificationService->broadcastNewLog($log);
+
+    return response()->json([
+        'message' => 'Test log created and broadcasted',
+        'log' => $log,
+        'student' => $student
+    ]);
 });
 
 Route::group(['prefix' => 'auth'], function () {
@@ -58,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('attendance-summary', [LogController::class, 'getAttendanceSummary']);
         Route::get('user-timeline', [LogController::class, 'getUserTimeline']);
         Route::get('current-occupancy', [LogController::class, 'getCurrentOccupancy']);
+        Route::get('report-data', [LogController::class, 'getReportData']);
     });
 
     Route::group(['prefix' => 'users'], function () {
@@ -77,7 +95,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::group(['prefix' => 'gate'], function () {
         Route::post('open/{number}', [GateController::class, 'OpenGate']);
         Route::post('toggle/{number}', [GateController::class, 'ToggleGate']);
-        Route::get('state/{number}', [GateController::class, 'getGateState']);
         Route::get('states', [GateController::class, 'getAllGateStates']);
     });
 });

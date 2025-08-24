@@ -83,6 +83,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
         normalized_headers = [_normalize_header_value(h) for h in headers]
         header_indices = {h: idx for idx, h in enumerate(normalized_headers) if h != ""}
 
+        # Required headers - QR Code is now optional
         required_headers = ["name", "group", "email"]
         missing_headers = [h for h in required_headers if h not in header_indices]
 
@@ -91,6 +92,14 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
             return {
                 "error": f'Trūkst nepieciešamo kolonnu: {", ".join(missing_headers)}'
             }
+
+        # Check for optional QR Code column (various possible names)
+        qr_code_variants = ["qr code", "qrcode", "qr_code", "qr-code", "uuid"]
+        qr_code_index = None
+        for variant in qr_code_variants:
+            if variant in header_indices:
+                qr_code_index = header_indices[variant]
+                break
 
         data = []
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -116,6 +125,11 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
                 "email": get_row_value(header_indices.get("email")),
             }
 
+            # Add QR code/UUID if column exists and has a value
+            qr_code_value = get_row_value(qr_code_index)
+            if qr_code_value and qr_code_value.strip():
+                entry["qr_code"] = qr_code_value.strip()
+
             data.append(entry)
 
         wb.close()
@@ -124,6 +138,7 @@ def process_excel_file(file_path: str) -> Dict[str, Any]:
             "data": data,
             "total_records": len(data),
             "headers": headers,
+            "has_qr_code_column": qr_code_index is not None,
         }
 
     except Exception as e:
@@ -205,7 +220,7 @@ def upload_excel():
         # Send to backend
         try:
             payload = {
-                "data": result["data"], 
+                "data": result["data"],
                 "total_records": result["total_records"]
             }
 
@@ -214,13 +229,17 @@ def upload_excel():
             if employee_id:
                 payload["employee_id"] = employee_id
                 logger.info(
-                    "Sūtu %d ierakstus uz backend %s ar darbinieku ID: %s", 
+                    "Sūtu %d ierakstus uz backend %s ar darbinieku ID: %s",
                     result["total_records"], BACKEND_URL, employee_id
                 )
             else:
                 logger.info(
                     "Sūtu %d ierakstus uz backend %s", result["total_records"], BACKEND_URL
                 )
+
+            # Log QR code column detection
+            if result.get("has_qr_code_column"):
+                logger.info("QR Code kolonna atrasta Excel failā")
 
             response = requests.post(BACKEND_URL, json=payload, timeout=10)
         except requests.RequestException as e:
@@ -242,12 +261,17 @@ def upload_excel():
             resp_text = "<nepieejams atbildes saturs>"
 
         if response.status_code == 200:
+            success_message = "Veiksmīgi apstrādāti dati un nosūtīti uz serveri"
+            if result.get("has_qr_code_column"):
+                success_message += " (ar QR kodu kolonu)"
+
             return (
                 jsonify(
                     {
                         "status": "success",
-                        "message": "Veiksmīgi apstrādāti dati un nosūtīti uz serveri",
+                        "message": success_message,
                         "total_records": result["total_records"],
+                        "has_qr_code_column": result.get("has_qr_code_column", False),
                     }
                 ),
                 200,

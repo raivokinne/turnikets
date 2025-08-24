@@ -25,24 +25,57 @@ class NotificationService
     }
 
     /**
+     * Broadcast a new log entry to WebSocket
+     */
+    public function broadcastNewLog(Log $log): void
+    {
+        $student = $log->student;
+
+        $message = [
+            'type' => 'new_log',
+            'log' => [
+                'id' => $log->id,
+                'time' => $log->time->toISOString(),
+                'action' => $log->action,
+                'description' => $log->description,
+                'student_id' => $log->student_id,
+            ],
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'status' => $student->status,
+            ],
+            'timestamp' => now()->toISOString(),
+        ];
+
+        try {
+            $this->pusher->trigger('logs', 'new-log', $message);
+
+            $this->pusher->trigger('notifications', 'new-log', $message);
+
+            LaravelLog::info('New log broadcasted', ['log_id' => $log->id]);
+        } catch (\Exception $e) {
+            LaravelLog::error('Failed to broadcast new log: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Check for consecutive entry/exit actions and send warning if detected
      */
     public function checkConsecutiveAction(Student $student, string $newAction): bool
     {
-        // Get the last two logs for this student
         $lastTwoLogs = Log::where('student_id', $student->id)
+            ->whereIn('action', ['entry', 'exit'])
             ->orderBy('time', 'desc')
             ->limit(2)
             ->get();
 
-        // If we don't have at least one previous log, no warning needed
         if ($lastTwoLogs->count() < 1) {
             return false;
         }
 
         $lastAction = $lastTwoLogs->first()->action;
 
-        // Check if the new action is the same as the last action (consecutive)
         if ($lastAction === $newAction) {
             $this->sendConsecutiveActionWarning($student, $newAction);
             return true;
@@ -68,10 +101,8 @@ class NotificationService
         ];
 
         try {
-            // Send to general notifications channel
             $this->pusher->trigger('notifications', 'consecutive-action', $message);
 
-            // Send to student-specific channel
             $this->pusher->trigger("student.{$student->id}", 'consecutive-action', $message);
 
             LaravelLog::info('Consecutive action warning sent', $message);
