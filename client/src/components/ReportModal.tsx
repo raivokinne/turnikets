@@ -72,9 +72,10 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
                 if (!l.time) return false;
 
                 try {
-                    // Parse ISO date string and convert to local time
+                    // Parse ISO date string and convert to Latvian timezone
                     const logDate = new Date(l.time);
                     const logTime = logDate.toLocaleTimeString('en-GB', {
+                        timeZone: 'Europe/Riga',
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: false
@@ -133,8 +134,8 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         const attendanceByDate = logsToUse
             .filter((log: LogEntry) => ['entry', 'exit'].includes(log.action || ''))
             .reduce<AttendanceAccumulator>((acc, log) => {
-                // assume log.time is like 'YYYY-MM-DD HH:MM:SS' or ISO string
-                const date = (log.time || '').split(' ')[0];
+                // Convert to Latvian timezone and extract date
+                const date = new Date(log.time || '').toLocaleDateString('en-CA', { timeZone: 'Europe/Riga' }); // YYYY-MM-DD format
                 if (!acc[date]) acc[date] = { date, entries: 0, exits: 0 };
                 if (log.action === 'entry') {
                     acc[date].entries++;
@@ -220,8 +221,9 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
 
         try {
             const date = new Date(dateTimeString);
-            const localDate = date.toLocaleDateString('lv-LV'); // Latvian format
+            const localDate = date.toLocaleDateString('lv-LV', { timeZone: 'Europe/Riga' }); // Latvian format with Riga timezone
             const localTime = date.toLocaleTimeString('lv-LV', {
+                timeZone: 'Europe/Riga',
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
@@ -232,16 +234,37 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
+    const formatDateForPDF = (dateString: string) => {
+        try {
+            return new Date(dateString).toLocaleDateString('lv-LV', { timeZone: 'Europe/Riga' });
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    const getCurrentDateTimeInLatvia = () => {
+        const now = new Date();
+        const date = now.toLocaleDateString('lv-LV', { timeZone: 'Europe/Riga' });
+        const time = now.toLocaleTimeString('lv-LV', {
+            timeZone: 'Europe/Riga',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        return { date, time };
+    };
+
     const exportToPDF = (): void => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        // Generate date range for the header
-        const startDateFormatted = new Date(filters.startDate).toLocaleDateString('lv-LV');
-        const endDateFormatted = new Date(filters.endDate).toLocaleDateString('lv-LV');
+        // Generate date range for the header using Latvian timezone
+        const startDateFormatted = formatDateForPDF(filters.startDate);
+        const endDateFormatted = formatDateForPDF(filters.endDate);
         const dateRange = filters.startDate === filters.endDate
             ? startDateFormatted
             : `${startDateFormatted} - ${endDateFormatted}`;
+
+        const currentDateTime = getCurrentDateTimeInLatvia();
 
         const printContent = `
 <!DOCTYPE html>
@@ -329,7 +352,7 @@ tr:nth-child(even) {
     <h1>Aktivitāšu atskaite</h1>
     <div class="subtitle">Periods: ${dateRange}</div>
     <div class="subtitle">Kopā ierakstu: ${filteredLogs.length}</div>
-    <div class="subtitle">Ģenerēts: ${new Date().toLocaleDateString('lv-LV')} ${new Date().toLocaleTimeString('lv-LV', { hour: '2-digit', minute: '2-digit' })}</div>
+    <div class="subtitle">Ģenerēts: ${currentDateTime.date} ${currentDateTime.time} (Latvijas laiks)</div>
 </div>
 
 <div class="summary">

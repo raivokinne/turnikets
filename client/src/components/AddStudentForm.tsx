@@ -399,8 +399,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p className="text-xs text-blue-700">
-                            <strong>Piezīme:</strong> Excel failam jāsatur kolonnas: Vārds un uzvārds, Klase, E-pasts.
-                            Pirmā rinda tiks uzskatīta par virsrakstiem. Visiem skolēniem automātiski tiks piešķirts statuss "Gaida".
+                            <strong>Piezīme:</strong> Excel failam jāsatur kolonnas: Name, Email, Group. Vēl pēc iespējas var pievienot kolonnu: QR Kods
                         </p>
                     </div>
 

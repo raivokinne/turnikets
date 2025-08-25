@@ -43,17 +43,12 @@ class GateController extends Controller
                 ->orderBy('time', 'desc')
                 ->first();
 
-            if ($lastLog && $lastLog->time->diffInSeconds(now()) < self::DUPLICATE_SCAN_TIMEOUT) {
+            $intendedAction = $reader == 1 ? 'exit' : 'entry';
+
+            if ($lastLog && $lastLog->action === $intendedAction && $lastLog->time->diffInSeconds(now()) < self::DUPLICATE_SCAN_TIMEOUT) {
                 $this->openGateForReader($ip, $reader);
                 return;
             }
-
-            $lastLog = Log::query()
-                ->where('student_id', $student->id)
-                ->orderBy('time', 'desc')
-                ->first();
-
-            $intendedAction = $reader == 1 ? 'exit' : 'entry';
 
             if ($lastLog && $lastLog->action === $intendedAction) {
                 $notifier->checkConsecutiveAction($student, $intendedAction);
@@ -61,7 +56,7 @@ class GateController extends Controller
 
                 if ($intendedAction == 'entry') {
                     $student->status = 'klātbūtnē';
-                    Log::create([
+                    $log = Log::create([
                         'time' => now(),
                         'student_id' => $student->id,
                         'action' => 'entry',
@@ -69,14 +64,15 @@ class GateController extends Controller
                     ]);
                 } else {
                     $student->status = 'prombūtnē';
-                    Log::create([
+                    $log = Log::create([
                         'time' => now(),
                         'student_id' => $student->id,
-                        'action' => 'entry',
+                        'action' => 'exit',
                         'description' => $student->name.' izgāja ārā '.now()->format('Y-m-d H:i:s'). ' divreiz!',
                     ]);
                 }
 
+                $notifier->broadcastNewLog($log);
                 $student->save();
                 return;
             }

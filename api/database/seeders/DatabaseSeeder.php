@@ -31,10 +31,10 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('employee123'),
             'role' => 'employee'
         ]);
-
+        /*
         Student::factory(500)->create();
 
         Log::factory(1000)->create();
-
+        */
     }
 }
