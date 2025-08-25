@@ -6,18 +6,25 @@ type Props = { children: React.ReactNode };
 
 export function WebSocketProvider({ children }: Props) {
     useEffect(() => {
-        const key = import.meta.env.VITE_PUSHER_KEY as string | undefined;
-        const cluster = (import.meta.env.VITE_PUSHER_CLUSTER as string | undefined) || 'eu';
+        const appKey = import.meta.env.VITE_REVERB_APP_KEY as string | undefined;
+        const host = import.meta.env.VITE_REVERB_HOST as string | undefined;
+        const port = import.meta.env.VITE_REVERB_PORT as string | undefined;
+        const scheme = import.meta.env.VITE_REVERB_SCHEME as string | undefined;
 
-        if (!key) {
-            console.warn('VITE_PUSHER_KEY is not set. Skipping WebSocket connection.');
+        if (!appKey || !host || !port) {
+            console.warn('Reverb configuration is incomplete. Skipping WebSocket connection.');
+            console.warn('Required: VITE_REVERB_APP_KEY, VITE_REVERB_HOST, VITE_REVERB_PORT');
             return;
         }
 
-        // Initialize Pusher client
-        const pusher = new Pusher(key, {
-            cluster,
-            forceTLS: true,
+        // Initialize Pusher client with Reverb configuration
+        const pusher = new Pusher(appKey, {
+            wsHost: host,
+            wsPort: parseInt(port),
+            wssPort: parseInt(port),
+            forceTLS: scheme === 'https',
+            enabledTransports: ['ws', 'wss'],
+            cluster: '', // Not needed for Reverb
         });
 
         // Subscribe to general notifications channel

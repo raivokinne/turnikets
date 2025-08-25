@@ -14,12 +14,14 @@ class NotificationService
     public function __construct()
     {
         $this->pusher = new Pusher(
-            config('broadcasting.connections.pusher.key'),
-            config('broadcasting.connections.pusher.secret'),
-            config('broadcasting.connections.pusher.app_id'),
+            config('broadcasting.connections.reverb.key'),
+            config('broadcasting.connections.reverb.secret'),
+            config('broadcasting.connections.reverb.app_id'),
             [
-                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
-                'useTLS' => true
+                'host' => config('broadcasting.connections.reverb.options.host'),
+                'port' => config('broadcasting.connections.reverb.options.port'),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme'),
+                'useTLS' => config('broadcasting.connections.reverb.options.scheme') === 'https',
             ]
         );
     }

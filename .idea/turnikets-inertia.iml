@@ -11,6 +11,20 @@
       <excludeFolder url="file://$MODULE_DIR$/api/vendor/laravel/telescope" />
       <excludeFolder url="file://$MODULE_DIR$/api/vendor/paragonie/sodium_compat" />
       <excludeFolder url="file://$MODULE_DIR$/api/vendor/pusher/pusher-php-server" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/clue/redis-protocol" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/clue/redis-react" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/evenement/evenement" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/laravel/reverb" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/ratchet/rfc6455" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/dns" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/event-loop" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/promise" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/promise-timer" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/socket" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/react/stream" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/symfony/polyfill-php84" />
+      <excludeFolder url="file://$MODULE_DIR$/api/vendor/symfony/polyfill-php85" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
