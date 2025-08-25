@@ -22,14 +22,12 @@ const StudentRow = React.memo(({
     isSelected,
     sendingStatus,
     onToggleSelection,
-    onPreviewQRCode,
     onSendQRCode
 }: {
     student: Student;
     isSelected: boolean;
     sendingStatus: 'idle' | 'sending' | 'sent' | 'failed';
     onToggleSelection: (student: Student) => void;
-    onPreviewQRCode: (student: Student) => void;
     onSendQRCode: (student: Student) => void;
 }) => {
     const getStatusBadge = useCallback((status: 'idle' | 'sending' | 'sent' | 'failed') => {
@@ -75,15 +73,6 @@ const StudentRow = React.memo(({
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onPreviewQRCode(student)}
-                    className="inline-flex items-center bg-white hover:bg-slate-50"
-                >
-                    <Info className="h-4 w-4 mr-1" />
-                    Skatīt
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => onSendQRCode(student)}
                     disabled={sendingStatus === 'sending'}
                     className={cn(
@@ -116,7 +105,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [sendingStatus, setSendingStatus] = useState<{ [key: string]: 'idle' | 'sending' | 'sent' | 'failed' }>({});
-    const [showQRPreview, setShowQRPreview] = useState<{ student: Student, url: string } | null>(null);
 
     // Debounced search to prevent excessive filtering
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -159,12 +147,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
             setSelectedStudentIds(new Set(finalFilteredStudents.map(s => s.id)));
         }
     }, [selectedStudentIds.size, finalFilteredStudents]);
-
-    const previewQRCode = useCallback((student: Student) => {
-        const qrData = QRService.generateQRCodeData(student.id, student.name, student.class);
-        const url = QRService.generateQRCodeUrl(qrData);
-        setShowQRPreview({ student, url });
-    }, []);
 
     const sendQRCode = useCallback(async (student: Student) => {
         setSendingStatus(prev => ({ ...prev, [student.id]: 'sending' }));
@@ -320,7 +302,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
                                                     isSelected={selectedStudentIds.has(student.id)}
                                                     sendingStatus={sendingStatus[student.id] || 'idle'}
                                                     onToggleSelection={toggleStudentSelection}
-                                                    onPreviewQRCode={previewQRCode}
                                                     onSendQRCode={sendQRCode}
                                                 />
                                             ))}
@@ -332,65 +313,6 @@ const SendQRCodeModal: React.FC<SendQRCodeModalProps> = ({ onClose, students }) 
                     </div>
                 </div>
             </Card>
-
-            {/* QR Code Preview Modal */}
-            {showQRPreview && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] transition-all duration-300">
-                    <Card className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 border-0">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-semibold text-slate-800">QR kods</h3>
-                            <Button variant="ghost" size="icon" onClick={() => setShowQRPreview(null)} className="rounded-full hover:bg-slate-100">
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-
-                        <div className="text-center">
-                            <div className="bg-white p-4 rounded-xl shadow-md inline-block mb-4">
-                                <img src={showQRPreview.url} alt="QR kods" className="mx-auto h-48 w-48" />
-                            </div>
-
-                            <div className="mb-6">
-                                <h4 className="text-lg font-medium text-slate-800 mb-1">
-                                    {showQRPreview.student.name}
-                                </h4>
-                                <div className="flex items-center justify-center gap-2 text-slate-500">
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
-                                        {showQRPreview.student.class}
-                                    </Badge>
-                                    <span className="text-sm">{showQRPreview.student.email}</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        const printWindow = window.open(showQRPreview.url, '_blank');
-                                        if (printWindow) {
-                                            printWindow.addEventListener('load', () => {
-                                                printWindow.print();
-                                            });
-                                        }
-                                    }}
-                                    className="w-full bg-white hover:bg-slate-50 border-slate-200"
-                                >
-                                    Izdrukāt QR kodu
-                                </Button>
-                                <Button
-                                    variant="default"
-                                    onClick={() => {
-                                        sendQRCode(showQRPreview.student);
-                                        setShowQRPreview(null);
-                                    }}
-                                    className="w-full bg-blue-600 hover:bg-blue-700"
-                                >
-                                    Nosūtīt QR kodu pa e-pastu
-                                </Button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            )}
         </div>
     );
 };

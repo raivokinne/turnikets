@@ -34,6 +34,10 @@ class GateController extends Controller
         $reader = $request->all()['Reader'];
         $student = Student::query()->where('uuid', $card)->first();
 
+        if (!$student->active) {
+            return;
+        }
+
         if ($student) {
             $notifier = app(NotificationService::class);
 

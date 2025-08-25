@@ -32,6 +32,7 @@ class StudentController extends Controller {
             'status' => 'required|in:klātbūtnē,prombūtnē,neviens',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
+            'active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -44,6 +45,7 @@ class StudentController extends Controller {
                 'status' => $request->status,
                 'name' => $request->name,
                 'email' => $request->email,
+                'active' => $request->input('active', true),
                 'time' => now(),
                 'uuid' => Str::uuid()->toString(),
             ]);
@@ -80,6 +82,7 @@ class StudentController extends Controller {
             'status' => 'sometimes|in:klātbutne,prombutnē',
             'user_id' => 'sometimes|integer|exists:users,id',
             'time' => 'sometimes|date_format:H:i:s',
+            'active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -107,6 +110,13 @@ class StudentController extends Controller {
             if ($request->has('status') && $request->status !== $student->status) {
                 $changes[] = "status from '{$student->status}' to '{$request->status}'";
                 $updateData['status'] = $request->status;
+            }
+
+            if ($request->has('active') && $request->active !== $student->active) {
+                $activeText = $request->active ? 'active' : 'inactive';
+                $oldActiveText = $student->active ? 'active' : 'inactive';
+                $changes[] = "active status from '{$oldActiveText}' to '{$activeText}'";
+                $updateData['active'] = $request->active;
             }
 
             if ($request->has('user_id')) {
@@ -139,12 +149,10 @@ class StudentController extends Controller {
                     'student_id' => $student->id,
                     'user_id' => Auth::id(),
                     'action' => 'student_updated',
-                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . 'Changes: ' . implode(', ', $changes),
+                    'description' => "Student '{$student->name}' updated by " . Auth::user()->name . '. Changes: ' . implode(', ', $changes),
                     'time' => now(),
                 ]);
             }
-
-            $student->save();
 
             return response()->json([
                 'status' => 200,
@@ -253,13 +261,16 @@ class StudentController extends Controller {
                 'time' => now()->format('H:i:s'),
             ]);
 
-            Log::create([
-                'student_id' => $student->id,
-                'user_id' => Auth::id(),
-                'action' => 'student_updated',
-                'description' => "Student '{$student->name}' status updated by " . Auth::user()->name . " from '{$oldStatus}' to '{$request->status}'",
-                'time' => now(),
-            ]);
+            // Only log if status actually changed
+            if ($oldStatus !== $request->status) {
+                Log::create([
+                    'student_id' => $student->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'status_updated',
+                    'description' => "Student '{$student->name}' status updated by " . Auth::user()->name . " from '{$oldStatus}' to '{$request->status}'",
+                    'time' => now(),
+                ]);
+            }
 
             return response()->json([
                 'status' => 200,
@@ -282,6 +293,7 @@ class StudentController extends Controller {
             'email' => 'required|email|max:255',
             'name' => 'required|string|max:255',
             'class' => 'required|string|max:255',
+            'active' => 'sometimes|string|in:true,false',
         ]);
 
         if ($validator->fails()) {
@@ -298,26 +310,65 @@ class StudentController extends Controller {
         }
 
         try {
-            $oldData = $student;
+            $changes = [];
 
-            $student->update([
+            // Store original values before making any changes
+            $originalEmail = $student->email;
+            $originalName = $student->name;
+            $originalClass = $student->class;
+            $originalActive = $student->active ?? true; // Default to true if null
+
+            // Track changes properly by comparing with original values
+            if ($request->email !== $originalEmail) {
+                $changes[] = "email from '{$originalEmail}' to '{$request->email}'";
+            }
+
+            if ($request->name !== $originalName) {
+                $changes[] = "name from '{$originalName}' to '{$request->name}'";
+            }
+
+            if ($request->class !== $originalClass) {
+                $changes[] = "class from '{$originalClass}' to '{$request->class}'";
+            }
+
+            if ($request->has('active')) {
+                // Properly convert the active field to boolean
+                $requestedActive = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
+                if ($requestedActive !== $originalActive) {
+                    $activeText = $requestedActive ? 'active' : 'inactive';
+                    $oldActiveText = $originalActive ? 'active' : 'inactive';
+                    $changes[] = "active status from '{$oldActiveText}' to '{$activeText}'";
+                }
+            }
+
+            $updateData = [
                 'email' => $request->email,
                 'name' => $request->name,
                 'class' => $request->class,
-            ]);
+            ];
 
-            Log::create([
-                'student_id' => $student->id,
-                'user_id' => Auth::id(),
-                'action' => 'student_updated',
-                'description' => "Student '{$student->name}' updated by ".Auth::user()->name." from '{$oldData->email}', '{$oldData->name}', '{$oldData->class}' to '{$request->email}', '{$request->name}', '{$request->class}'",
-                'time' => now(),
-            ]);
+            if ($request->has('active')) {
+                // Use the same conversion method for storing in database
+                $updateData['active'] = filter_var($request->active, FILTER_VALIDATE_BOOLEAN);
+            }
+
+            $student->update($updateData);
+
+            // Only log if there were actual changes
+            if (!empty($changes)) {
+                Log::create([
+                    'student_id' => $student->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'profile_updated',
+                    'description' => "Student '{$student->name}' profile updated by " . Auth::user()->name . '. Changes: ' . implode(', ', $changes),
+                    'time' => now(),
+                ]);
+            }
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Student updated successfully',
-                'data' => $student,
+                'data' => $student->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -353,6 +404,7 @@ class StudentController extends Controller {
                     'email'  => trim($studentData['email'] ?? ''),
                     'class'  => trim($studentData['group'] ?? ''),
                     'uuid'   => $uuid,
+                    'active' => true, // Default to active for mass uploads
                     'time'   => now(),
                 ];
 

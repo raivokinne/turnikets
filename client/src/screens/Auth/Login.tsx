@@ -71,7 +71,7 @@ export default function LoginPage() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="your@email.com"
+                                placeholder="tavs@epasts.com"
                                 {...form.register('email')}
                                 disabled={isLoading}
                             />
@@ -89,6 +89,7 @@ export default function LoginPage() {
                             <Input
                                 id="password"
                                 type="password"
+                                placeholder="********"
                                 {...form.register('password')}
                                 disabled={isLoading}
                             />

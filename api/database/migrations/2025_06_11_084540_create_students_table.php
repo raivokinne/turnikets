@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->string('email')->nullable();
             $table->string('class')->nullable();
             $table->string('uuid')->unique()->after('id');
-            $table->time('time'); // Timestamp of the most recent action?
+            $table->time('time');
             $table->timestamps();
         });
     }

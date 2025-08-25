@@ -26,6 +26,37 @@ interface ExtendedAuthContextValue extends AuthContextValue {
     isInitialized: boolean;
 }
 
+// Helper function to translate common error messages to Latvian
+const translateErrorMessage = (message: string): string => {
+    const translations: { [key: string]: string } = {
+        "Wrong password or email": "Nepareiza parole vai e-pasta adrese",
+        "Incorrect Payload": "Nepareizi dati",
+        "Login failed": "Pierakstīšanās neveiksmīga",
+        "Validation errors": "Validācijas kļūdas",
+        "Network error": "Tīkla kļūda",
+        "Server error": "Servera kļūda",
+        "Unauthorized": "Nav autorizācijas",
+        "Invalid credentials": "Nepareizi pieteikšanās dati",
+        "User successfully logged in": "Pierakstīšanās veiksmīga"
+    };
+
+    return translations[message] || message;
+};
+
+// Helper function to extract and translate error message from response
+const getErrorMessage = (error: any): string => {
+    if (error?.response?.data?.errors?.message) {
+        return translateErrorMessage(error.response.data.errors.message);
+    }
+    if (error?.response?.data?.message) {
+        return translateErrorMessage(error.response.data.message);
+    }
+    if (error?.message) {
+        return translateErrorMessage(error.message);
+    }
+    return "Nezināma kļūda";
+};
+
 const AuthContext = createContext<ExtendedAuthContextValue>({
     user: null,
     authenticated: false,
@@ -89,17 +120,18 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
                 // Refetch user data immediately
                 await queryClient.refetchQueries({ queryKey: ['user'] });
 
-                toast.success(data.message || "Login successful");
+                toast.success(data.message ? translateErrorMessage(data.message) : "Pierakstīšanās veiksmīga");
             } else {
                 throw new Error(data.errors ?
-                    (typeof data.errors === 'string' ? data.errors : 'Validation errors') :
-                    data.message || 'Login failed'
+                    (typeof data.errors === 'string' ? data.errors : 'Validācijas kļūdas') :
+                    data.message || 'Pierakstīšanās neveiksmīga'
                 );
             }
         },
-        onError: (error: Error) => {
+        onError: (error: any) => {
             console.error('Login error:', error);
-            toast.error(error.message || "Login failed");
+            const errorMessage = getErrorMessage(error);
+            toast.error(errorMessage);
             setAuthenticated(false);
             storage.remove("token");
         }
@@ -116,7 +148,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
             setAuthenticated(false);
             queryClient.setQueryData(['user'], null);
             queryClient.clear(); // Clear all queries
-            toast.success("Logged out successfully");
+            toast.success("Veiksmīgi izrakstījāties");
         },
         onError: (error: Error) => {
             console.error('Logout error:', error);
@@ -125,7 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
             setAuthenticated(false);
             queryClient.setQueryData(['user'], null);
             queryClient.clear();
-            toast.error("Logout completed (with errors)");
+            toast.error("Izrakstīšanās ar kļūdām");
         }
     });
 

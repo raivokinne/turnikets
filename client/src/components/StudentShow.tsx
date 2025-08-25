@@ -1,5 +1,5 @@
 import { Student } from "@/types/students";
-import { Mail, Hash, GraduationCap, User, Loader2 } from "lucide-react";
+import { Mail, Hash, GraduationCap, User, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -37,6 +37,7 @@ export function StudentShow({
     const [email, setEmail] = useState(student.email);
     const [name, setName] = useState(student.name);
     const [studentClass, setStudentClass] = useState(student.class);
+    const [active, setActive] = useState(student.active ?? true);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +49,7 @@ export function StudentShow({
         setEmail(student.email);
         setName(student.name);
         setStudentClass(student.class);
+        setActive(student.active ?? true);
     }, [student]);
 
     // Handle input changes with optimistic updates
@@ -81,6 +83,17 @@ export function StudentShow({
         }
     };
 
+    const handleActiveToggle = () => {
+        const newActive = !active;
+        setActive(newActive);
+        if (onOptimisticUpdate) {
+            onOptimisticUpdate({
+                ...student,
+                active: newActive
+            });
+        }
+    };
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
@@ -90,15 +103,16 @@ export function StudentShow({
             email,
             name,
             class: studentClass,
+            active,
         };
 
         try {
-            // Always make the API call to persist changes
             await api.post("/students/update-profile", {
                 id: student.id,
                 email: email,
                 name: name,
                 class: studentClass,
+                active: active,
             });
 
             // Update the cache
@@ -153,27 +167,56 @@ export function StudentShow({
     const hasChanges = () => {
         return email !== student.email ||
             name !== student.name ||
-            studentClass !== student.class;
+            studentClass !== student.class ||
+            active !== (student.active ?? true);
     };
 
     return (
         <Dialog open={show} onOpenChange={setShow}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        Studenta Profils
+                    <DialogTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            Studenta Profils
+                        </div>
+
+                        {/* Active Toggle in top right */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                                {active ? 'Aktīvs' : 'Neaktīvs'}
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleActiveToggle}
+                                disabled={isUpdating || isSaving}
+                                className="p-1 h-auto"
+                            >
+                                {active ? (
+                                    <ToggleRight className="h-6 w-6 text-green-600" />
+                                ) : (
+                                    <ToggleLeft className="h-6 w-6 text-gray-400" />
+                                )}
+                            </Button>
+                        </div>
                     </DialogTitle>
                 </DialogHeader>
 
                 <div className="flex flex-col items-center space-y-4 py-4">
                     <div className="text-center space-y-1">
                         <h3 className="text-xl font-semibold">{name || student.name}</h3>
-                        {hasChanges() && (
-                            <Badge variant="secondary" className="text-xs">
-                                Nesaglabātas izmaiņas
+                        <div className="flex items-center justify-center gap-2">
+                            <Badge variant={active ? "default" : "secondary"} className="text-xs">
+                                {active ? 'Aktīvs' : 'Neaktīvs'}
                             </Badge>
-                        )}
+                            {hasChanges() && (
+                                <Badge variant="secondary" className="text-xs">
+                                    Nesaglabātas izmaiņas
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                 </div>
 

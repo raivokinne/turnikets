@@ -62,6 +62,15 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
     const [allDateRangeLogs, setAllDateRangeLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
+    // Function to normalize text by removing diacritics and converting to lowercase
+    const normalizeText = (text: string): string => {
+        return text
+            .toLowerCase()
+            .normalize('NFD') // Decompose accented characters
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
+            .trim();
+    };
+
     // Apply frontend filters to logs
     const applyFrontendFilters = useCallback((logsToFilter: LogEntry[]) => {
         let filtered = [...logsToFilter];
@@ -92,13 +101,13 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
             });
         }
 
-        // Filter by query (name or email) if provided
+        // Filter by query (name or email) with normalized search
         if (filters.query && filters.query.trim() !== '') {
-            const q = filters.query.trim().toLowerCase();
+            const normalizedQuery = normalizeText(filters.query);
             filtered = filtered.filter(l => {
-                const name = (l.student?.name || '').toString().toLowerCase();
-                const email = (l.student?.email || '').toString().toLowerCase();
-                return name.includes(q) || email.includes(q);
+                const name = normalizeText((l.student?.name || '').toString());
+                const email = normalizeText((l.student?.email || '').toString());
+                return name.includes(normalizedQuery) || email.includes(normalizedQuery);
             });
         }
 

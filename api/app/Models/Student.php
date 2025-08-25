@@ -15,7 +15,8 @@ class Student extends Model
         'uuid',
         'name',
         'time',
-        'email'
+        'email',
+        'active',
     ];
 
     public function logs(): HasMany

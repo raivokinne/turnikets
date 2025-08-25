@@ -20,6 +20,7 @@ interface AddStudentFormProps {
 interface UploadResponse {
     total_records?: number;
     message?: string;
+    created?: number;
 }
 
 const studentSchema = z.object({
@@ -80,17 +81,55 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
     const createStudentMutation = useMutation({
         mutationFn: (studentData: Omit<Student, "id">) =>
             studentsApi.create(studentData),
-        onSuccess: (data: Student) => {
+        onMutate: async (newStudent) => {
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({ queryKey: ["students"] });
+
+            // Snapshot the previous value
+            const previousStudents = queryClient.getQueryData(["students"]);
+
+            // Create optimistic student with temporary ID
+            const optimisticStudent: Student = {
+                id: Date.now(), // Temporary ID until we get the real one from server
+                ...newStudent,
+                active: true, // Default active status
+            };
+
+            // Optimistically update the cache
+            queryClient.setQueryData(["students"], (old: Student[] | undefined) => {
+                return old ? [...old, optimisticStudent] : [optimisticStudent];
+            });
+
+            // Return a context with the previous and optimistic student
+            return { previousStudents, optimisticStudent };
+        },
+        onSuccess: (data: Student, variables, context) => {
+            // Update the cache with the real student data from the server
+            queryClient.setQueryData(["students"], (old: Student[] | undefined) => {
+                if (!old) return [data];
+
+                // Replace the optimistic student with the real one
+                return old.map(student =>
+                    student.id === context?.optimisticStudent.id ? data : student
+                );
+            });
+
             toast.success("Skolēns veiksmīgi pievienots!");
-            queryClient.invalidateQueries({ queryKey: ["students"] });
             onSubmit?.(data);
             onClose();
         },
-        onError: (error: Error) => {
+        onError: (error: Error, variables, context) => {
+            // Revert the optimistic update
+            queryClient.setQueryData(["students"], context?.previousStudents);
+
             console.error("Create student error:", error);
             const errorMessage = error.message || "Kļūda pievienojot skolēnu";
             setError(errorMessage);
             toast.error(errorMessage);
+        },
+        onSettled: () => {
+            // Always refetch after error or success to ensure consistency
+            queryClient.invalidateQueries({ queryKey: ["students"] });
         },
     });
 
@@ -147,9 +186,12 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             });
         },
         onSuccess: (data: UploadResponse) => {
-            const successMessage = data.message || `Veiksmīgi augšupielādēti ${data.total_records || 0} ieraksti!`;
+            const successMessage = data.message || `Veiksmīgi augšupielādēti ${data.total_records || data.created || 0} ieraksti!`;
             toast.success(successMessage);
+
+            // Invalidate and refetch the students list to get the newly uploaded students
             queryClient.invalidateQueries({ queryKey: ["students"] });
+
             onClose();
         },
         onError: (error: Error) => {
@@ -169,6 +211,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSubmit }) =>
             class: data.class,
             status: "neviens", // Auto-set default status to "neviens" (Gaida)
             time: new Date().toISOString(),
+            active: true, // Default to active
         };
 
         createStudentMutation.mutate(studentData);

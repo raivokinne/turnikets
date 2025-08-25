@@ -5,4 +5,5 @@ export interface Student {
   name: string;
   email: string;
   time: string;
+  active: boolean;
 }

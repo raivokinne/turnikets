@@ -11,6 +11,7 @@ interface Student {
     status: string;
     time?: string;
     email?: string;
+    active?: boolean;
 }
 
 const StudentManagement: React.FC = () => {
@@ -25,15 +26,13 @@ const StudentManagement: React.FC = () => {
     const { data: allStudents = [], isLoading: loading } = useQuery({
         queryKey: ["students"],
         queryFn: () => studentsApi.getAll(),
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
 
-    // Mutation for updating students
     useMutation({
         mutationFn: (updatedStudent: Student) => studentsApi.update(updatedStudent.id, updatedStudent),
         onSuccess: (updatedStudent: Student) => {
-            // Optimistically update the cache
             queryClient.setQueryData(["students"], (oldStudents: Student[] | undefined) => {
                 if (!oldStudents) return [updatedStudent];
                 return oldStudents.map(student =>
@@ -46,29 +45,48 @@ const StudentManagement: React.FC = () => {
         }
     });
 
+    const normalizeText = (text: string): string => {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[āĀ]/g, 'a')
+            .replace(/[ēĒ]/g, 'e')
+            .replace(/[īĪ]/g, 'i')
+            .replace(/[ōŌ]/g, 'o')
+            .replace(/[ūŪ]/g, 'u')
+            .replace(/[čČ]/g, 'c')
+            .replace(/[ģĢ]/g, 'g')
+            .replace(/[ķĶ]/g, 'k')
+            .replace(/[ļĻ]/g, 'l')
+            .replace(/[ņŅ]/g, 'n')
+            .replace(/[šŠ]/g, 's')
+            .replace(/[žŽ]/g, 'z');
+    };
+
     const classes = Array.from(new Set(allStudents.map((s: Student) => s.class ?? ''))).filter(Boolean).sort();
     const statuses = Array.from(new Set(allStudents.map((s: Student) => s.status ?? ''))).filter(Boolean).sort();
 
-    // Helper function to get status priority
     const getStatusPriority = (status: string): number => {
         const normalizedStatus = status.toLowerCase();
         switch (normalizedStatus) {
             case 'klātbūtnē':
             case 'present':
-                return 1; // Highest priority
+                return 1;
             case 'prombūtnē':
             case 'absent':
-                return 2; // Second priority
+                return 2;
             default:
-                return 3; // Lowest priority (includes 'kavējums', 'late', etc.)
+                return 3;
         }
     };
 
-    // Filter and sort students
     const filteredStudents = allStudents
         .filter((student: Student) => {
             const name = student.name ?? '';
-            const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+            const normalizedName = normalizeText(name);
+            const normalizedSearch = normalizeText(searchQuery);
+            const matchesSearch = normalizedName.includes(normalizedSearch);
 
             const status = student.status ?? '';
             const matchesStatus = !selectedStatus || status === selectedStatus;
@@ -79,7 +97,6 @@ const StudentManagement: React.FC = () => {
             return matchesSearch && matchesClass && matchesStatus;
         })
         .sort((a: Student, b: Student) => {
-            // First, sort by status priority
             const statusPriorityA = getStatusPriority(a.status);
             const statusPriorityB = getStatusPriority(b.status);
 
@@ -87,7 +104,6 @@ const StudentManagement: React.FC = () => {
                 return statusPriorityA - statusPriorityB;
             }
 
-            // If status priority is the same, sort alphabetically by name
             const nameA = (a.name ?? '').toLowerCase();
             const nameB = (b.name ?? '').toLowerCase();
 
@@ -141,7 +157,6 @@ const StudentManagement: React.FC = () => {
 
     const handleStudentUpdate = async (updatedStudent: Student) => {
         try {
-            // Optimistically update the query cache
             queryClient.setQueryData(["students"], (oldData: Student[] | undefined) => {
                 if (!oldData) return oldData;
 
@@ -150,17 +165,12 @@ const StudentManagement: React.FC = () => {
                 );
             });
 
-            // Update the selected student if it's the same one
             if (selectedStudent?.id === updatedStudent.id) {
                 setSelectedStudent(updatedStudent);
             }
 
-            // Optionally, you can also call the API to persist changes
-            // await studentsApi.update(updatedStudent.id, updatedStudent);
-
         } catch (error) {
             console.error('Failed to update student:', error);
-            // Revert the optimistic update on error
             queryClient.invalidateQueries({ queryKey: ["students"] });
         }
     };
@@ -181,6 +191,13 @@ const StudentManagement: React.FC = () => {
             console.error('Failed to delete student:', error);
             queryClient.invalidateQueries({ queryKey: ["students"] });
         }
+    };
+
+    const handleStudentAdd = (newStudent: Student) => {
+        queryClient.setQueryData(["students"], (oldData: Student[] | undefined) => {
+            if (!oldData) return [newStudent];
+            return [...oldData, newStudent];
+        });
     };
 
     const clearFilters = () => {
@@ -319,7 +336,9 @@ const StudentManagement: React.FC = () => {
                             <div key={student.id} className="group relative" style={{ height: 'fit-content' }}>
                                 {/* Main student card */}
                                 <div
-                                    className="flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 hover:shadow-sm rounded-lg group-hover:rounded-b-none transition-all duration-200 cursor-pointer px-3 py-2.5 relative z-10"
+                                    className={`flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 hover:shadow-sm rounded-lg group-hover:rounded-b-none transition-all duration-200 cursor-pointer px-3 py-2.5 relative z-10 ${
+                                        student.active === false ? 'opacity-60' : ''
+                                    }`}
                                     onClick={() => handleStudentClick(student)}
                                 >
                                     {/* Status dot */}
@@ -390,6 +409,7 @@ const StudentManagement: React.FC = () => {
                     setShow={setShowModal}
                     onStudentUpdate={handleStudentUpdate}
                     onStudentDelete={handleStudentDelete}
+                    onStudentAdd={handleStudentAdd}
                 />
             )}
         </>
