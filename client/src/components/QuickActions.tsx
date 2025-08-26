@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { User, QrCode, BookPlus, DoorOpen, ToggleLeft, ToggleRight, Wifi, WifiOff } from 'lucide-react';
+import { User, QrCode, BookPlus, DoorOpen, ToggleLeft, ToggleRight, Wifi, WifiOff, UserPlus } from 'lucide-react';
 import AddStudentForm from './AddStudentForm';
+import AddEmployeeForm from './AddEmployeeForm';
 import SendQRCodeModal from './SendQRCodeModal';
 import { Student } from '@/types/students';
 import { studentsApi } from "@/api/students";
@@ -16,6 +17,7 @@ interface GateState {
 
 const QuickActions: React.FC = () => {
     const [showAddStudent, setShowAddStudent] = useState(false);
+    const [showAddEmployee, setShowAddEmployee] = useState(false);
     const [showSendQRCode, setShowSendQRCode] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [gateStates, setGateStates] = useState<{ [key: number]: GateState }>({
@@ -24,20 +26,17 @@ const QuickActions: React.FC = () => {
     });
     const [isLoadingGates, setIsLoadingGates] = useState(false);
 
-    // Use React Query for students data to stay in sync
     const { data: students = [], isLoading: studentsLoading } = useQuery({
         queryKey: ['students'],
         queryFn: studentsApi.getAll,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
     });
 
-    // Fetch gate states on mount
     useEffect(() => {
         fetchGateStates();
     }, []);
 
-    // Set up interval to fetch gate states every 3 seconds
     useEffect(() => {
         const interval = setInterval(() => {
             fetchGateStates();
@@ -61,8 +60,11 @@ const QuickActions: React.FC = () => {
     };
 
     const handleAddStudent = (student: Student) => {
-        // No need to manually update state since React Query will handle it
         console.log('New student added:', student);
+    };
+
+    const handleAddEmployee = (employee: Student) => {
+        console.log('New employee added:', employee);
     };
 
     const handleSendQRCodes = () => {
@@ -83,7 +85,6 @@ const QuickActions: React.FC = () => {
         try {
             await gatesApi.openGate(gateNumber);
             console.log(`Gate ${gateNumber} opened for 5 seconds`);
-            // Refresh gate states after operation
             setTimeout(() => {
                 fetchGateStates();
             }, 1000);
@@ -149,6 +150,14 @@ const QuickActions: React.FC = () => {
                     >
                         <User className="mr-3 h-6 w-6" />
                         Pievienot jaunu skolēnu
+                    </button>
+
+                    <button
+                        className="w-full flex items-center justify-start p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-lg font-medium transition-colors"
+                        onClick={() => setShowAddEmployee(true)}
+                    >
+                        <UserPlus className="mr-3 h-6 w-6" />
+                        Pievienot jaunu darbinieku
                     </button>
 
                     <button
@@ -299,6 +308,20 @@ const QuickActions: React.FC = () => {
                         <AddStudentForm
                             onClose={() => setShowAddStudent(false)}
                             onSubmit={handleAddStudent}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showAddEmployee} onOpenChange={setShowAddEmployee}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Pievienot darbinieku</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-2">
+                        <AddEmployeeForm
+                            onClose={() => setShowAddEmployee(false)}
+                            onSubmit={handleAddEmployee}
                         />
                     </div>
                 </DialogContent>
